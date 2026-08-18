@@ -43,6 +43,7 @@ type GatewayHandler struct {
 	openAIGatewayService      *service.OpenAIGatewayService
 	geminiCompatService       *service.GeminiMessagesCompatService
 	antigravityGatewayService *service.AntigravityGatewayService
+	happyShrimpGateway        *service.HappyShrimpGatewayService
 	userService               *service.UserService
 	billingCacheService       *service.BillingCacheService
 	usageService              *service.UsageService
@@ -57,6 +58,11 @@ type GatewayHandler struct {
 	maxAccountSwitchesGemini  int
 	cfg                       *config.Config
 	settingService            *service.SettingService
+}
+
+// SetHappyShrimpGateway 注入快乐虾米网关服务（独立于构造函数，避免破坏既有调用点）。
+func (h *GatewayHandler) SetHappyShrimpGateway(gateway *service.HappyShrimpGatewayService) {
+	h.happyShrimpGateway = gateway
 }
 
 // NewGatewayHandler creates a new GatewayHandler
@@ -2462,4 +2468,186 @@ func (h *GatewayHandler) getUserMsgQueueMode(account *service.Account, parsed *s
 		mode = h.cfg.Gateway.UserMessageQueue.GetEffectiveMode()
 	}
 	return mode
+}
+
+// AudioGenerations handles POST /v1/audio/generations (Happy Shrimp 音乐生成)。
+// 快乐虾米为异步 create→batch-get 轮询协议，本 handler 负责：
+//  1. 按分组选择 happy_shrimp 账号（带 failover）
+//  2. 转发到 HappyShrimpGatewayService（内部完成 create/轮询/组装）
+//
+// 请求体（OpenAI 兼容风格）:
+//
+//	{"model":"HappyShrimp","prompt":"...","n":2,"instrumental":false}
+//
+// 成功响应:
+//
+//	{"data":[{"id":"HSSG...","title":"...","duration_ms":116100,"url":"https://cdn.../x.mp3",...}]}
+func (h *GatewayHandler) AudioGenerations(c *gin.Context) {
+	streamStarted := false
+
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	if !ok {
+		h.errorResponse(c, http.StatusUnauthorized, "authentication_error", "Invalid API key")
+		return
+	}
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		h.errorResponse(c, http.StatusInternalServerError, "api_error", "User context not found")
+		return
+	}
+	reqLog := requestLogger(
+		c,
+		"handler.gateway.audio_generations",
+		zap.Int64("user_id", subject.UserID),
+		zap.Int64("api_key_id", apiKey.ID),
+		zap.Any("group_id", apiKey.GroupID),
+	)
+
+	platform := ""
+	if forcePlatform, ok := middleware2.GetForcePlatformFromContext(c); ok {
+		platform = forcePlatform
+	} else if resolvedPlatform, ok := service.ResolvedTargetPlatformFromContext(c.Request.Context()); ok {
+		platform = resolvedPlatform
+	} else if apiKey.Group != nil {
+		platform = apiKey.Group.Platform
+	}
+	if platform != service.PlatformHappyShrimp {
+		service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
+		h.errorResponse(c, http.StatusNotFound, "not_found_error", "Audio Generations API is not supported for this platform")
+		return
+	}
+	if h.happyShrimpGateway == nil {
+		h.errorResponse(c, http.StatusServiceUnavailable, "api_error", "Happy Shrimp gateway is not configured")
+		return
+	}
+
+	body, err := readLenientJSONRequestBodyWithPrealloc(c.Request, h.cfg)
+	if err != nil {
+		if maxErr, ok := extractMaxBytesError(err); ok {
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			return
+		}
+		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
+		return
+	}
+	if len(body) == 0 {
+		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Request body is empty")
+		return
+	}
+
+	// 计费资格（余额/订阅）
+	subscription, _ := middleware2.GetSubscriptionFromContext(c)
+	if h.billingCacheService != nil {
+		if err := h.billingCacheService.CheckBillingEligibility(c.Request.Context(), apiKey.User, apiKey, apiKey.Group, subscription, service.QuotaPlatform(c.Request.Context(), apiKey)); err != nil {
+			reqLog.Info("gateway.audio_generations.billing_eligibility_check_failed", zap.Error(err))
+			status, code, message, retryAfter := billingErrorDetails(err)
+			if retryAfter > 0 {
+				c.Header("Retry-After", strconv.Itoa(retryAfter))
+			}
+			h.handleStreamingAwareError(c, status, code, message, streamStarted)
+			return
+		}
+	}
+
+	// 内容审计（音乐生成 prompt 也是用户内容）
+	if decision := h.checkSecurityAudit(c, reqLog, apiKey, subject, service.ContentModerationProtocolAudioGeneration, "", body); decision != nil && !decision.AllowNextStage {
+		h.anthropicSecurityAuditError(c, decision)
+		return
+	}
+
+	// 用户并发槽位
+	if h.concurrencyHelper != nil {
+		userReleaseFunc, slotErr := h.concurrencyHelper.AcquireUserSlotWithWait(c, subject.UserID, subject.Concurrency, false, &streamStarted)
+		if slotErr != nil {
+			reqLog.Warn("gateway.audio_generations.user_slot_acquire_failed", zap.Error(slotErr))
+			h.handleConcurrencyError(c, slotErr, "user", streamStarted)
+			return
+		}
+		userReleaseFunc = wrapReleaseOnDone(c.Request.Context(), userReleaseFunc)
+		if userReleaseFunc != nil {
+			defer userReleaseFunc()
+		}
+	}
+
+	// 账号选择 + failover 循环
+	failedAccountIDs := make(map[int64]struct{})
+	var lastFailoverErr *service.UpstreamFailoverError
+	switchCount := 0
+
+	for {
+		if len(failedAccountIDs) > 0 && switchCount >= h.maxAccountSwitches {
+			reqLog.Warn("gateway.audio_generations.account_switch_exhausted", zap.Int("switch_count", switchCount))
+			if lastFailoverErr != nil {
+				h.handleFailoverExhausted(c, lastFailoverErr, service.PlatformHappyShrimp, streamStarted)
+			} else {
+				h.handleFailoverExhaustedSimple(c, http.StatusBadGateway, streamStarted)
+			}
+			return
+		}
+
+		selection, selectErr := h.gatewayService.SelectAccountWithLoadAwareness(
+			c.Request.Context(), apiKey.GroupID, "", "", failedAccountIDs, "", 0,
+		)
+		if selectErr != nil {
+			reqLog.Warn("gateway.audio_generations.account_select_failed", zap.Error(selectErr), zap.Int("excluded_count", len(failedAccountIDs)))
+			if len(failedAccountIDs) == 0 {
+				cls := classifyNoAccountErrorFromGin(c, h.gatewayService, apiKey, "", "", service.PlatformHappyShrimp)
+				if !cls.ModelNotFound {
+					markOpsRoutingCapacityLimitedIfNoAvailable(c, selectErr)
+				}
+				message := cls.Message
+				if !cls.ModelNotFound {
+					message = "No available accounts: " + selectErr.Error()
+				}
+				h.handleStreamingAwareError(c, cls.Status, cls.ErrType, message, streamStarted)
+				return
+			}
+			if lastFailoverErr != nil {
+				h.handleFailoverExhausted(c, lastFailoverErr, service.PlatformHappyShrimp, streamStarted)
+			} else {
+				h.handleFailoverExhaustedSimple(c, http.StatusBadGateway, streamStarted)
+			}
+			return
+		}
+		if selection == nil || selection.Account == nil {
+			h.errorResponse(c, http.StatusBadGateway, "api_error", "No available accounts")
+			return
+		}
+		account := selection.Account
+		setOpsSelectedAccount(c, account.ID, account.Platform)
+		reqLog.Debug("gateway.audio_generations.account_selected", zap.Int64("account_id", account.ID), zap.String("account_name", account.Name))
+
+		if selection.Acquired && selection.ReleaseFunc != nil {
+			defer selection.ReleaseFunc()
+		}
+
+		result, forwardErr := h.happyShrimpGateway.Forward(c.Request.Context(), c, account, body)
+		if forwardErr == nil {
+			c.JSON(http.StatusOK, result)
+			return
+		}
+
+		var failoverErr *service.UpstreamFailoverError
+		if errors.As(forwardErr, &failoverErr) {
+			if failoverErr.ShouldRetryNextAccount() {
+				switchCount++
+				failedAccountIDs[account.ID] = struct{}{}
+				lastFailoverErr = failoverErr
+				reqLog.Warn("gateway.audio_generations.account_failover",
+					zap.Int64("account_id", account.ID),
+					zap.Int("switch_count", switchCount),
+					zap.String("reason", string(failoverErr.Reason)),
+					zap.Error(forwardErr),
+				)
+				continue
+			}
+			h.handleFailoverExhausted(c, failoverErr, service.PlatformHappyShrimp, streamStarted)
+			return
+		}
+
+		// 非 failover 错误：直接返回 502
+		reqLog.Error("gateway.audio_generations.forward_failed", zap.Int64("account_id", account.ID), zap.Error(forwardErr))
+		h.errorResponse(c, http.StatusBadGateway, "api_error", "Audio generation failed: "+forwardErr.Error())
+		return
+	}
 }

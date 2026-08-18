@@ -271,6 +271,16 @@ func (a *Account) IsGrokOAuth() bool {
 	return a.IsGrok() && a.Type == AccountTypeOAuth
 }
 
+// IsHappyShrimp 报告账号是否为快乐虾米平台。
+func (a *Account) IsHappyShrimp() bool {
+	return a != nil && a.Platform == PlatformHappyShrimp
+}
+
+// IsHappyShrimpOAuth 报告是否为快乐虾米 OAuth（token）账号。
+func (a *Account) IsHappyShrimpOAuth() bool {
+	return a.IsHappyShrimp() && a.Type == AccountTypeOAuth
+}
+
 func (a *Account) IsOpenAICompatible() bool {
 	return a != nil && (a.Platform == PlatformOpenAI || a.Platform == PlatformGrok)
 }
@@ -1385,6 +1395,22 @@ func (a *Account) GetGrokAccessToken() string {
 
 func (a *Account) GetGrokRefreshToken() string {
 	if !a.IsGrokOAuth() {
+		return ""
+	}
+	return a.GetCredential("refresh_token")
+}
+
+// GetHappyShrimpAccessToken 返回快乐虾米 JWT access token。
+func (a *Account) GetHappyShrimpAccessToken() string {
+	if !a.IsHappyShrimp() {
+		return ""
+	}
+	return a.GetCredential("access_token")
+}
+
+// GetHappyShrimpRefreshToken 返回快乐虾米 refresh token（即"Session"）。
+func (a *Account) GetHappyShrimpRefreshToken() string {
+	if !a.IsHappyShrimpOAuth() {
 		return ""
 	}
 	return a.GetCredential("refresh_token")

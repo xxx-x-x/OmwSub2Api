@@ -125,6 +125,7 @@ func ProvideTokenRefreshService(
 	geminiOAuthService *GeminiOAuthService,
 	antigravityOAuthService *AntigravityOAuthService,
 	grokOAuthService *GrokOAuthService,
+	happyShrimpOAuthService *HappyShrimpOAuthService,
 	cacheInvalidator TokenCacheInvalidator,
 	schedulerCache SchedulerCache,
 	cfg *config.Config,
@@ -142,8 +143,40 @@ func ProvideTokenRefreshService(
 	// 调用侧显式注入后台刷新策略，避免策略漂移
 	svc.SetRefreshPolicy(DefaultBackgroundRefreshPolicy())
 	svc.SetAccountRuntimeBlocker(runtimeBlocker)
+	// 快乐虾米后台刷新（后加入平台，通过 setter 注册）
+	if happyShrimpOAuthService != nil {
+		svc.SetHappyShrimpRefresher(NewHappyShrimpTokenRefresher(happyShrimpOAuthService))
+	}
 	svc.Start()
 	return svc
+}
+
+// ProvideHappyShrimpOAuthService creates the Happy Shrimp OAuth/token service.
+func ProvideHappyShrimpOAuthService(proxyRepo ProxyRepository, cfg *config.Config) *HappyShrimpOAuthService {
+	return NewHappyShrimpOAuthService(proxyRepo, cfg)
+}
+
+// ProvideHappyShrimpTokenProvider creates HappyShrimpTokenProvider with OAuthRefreshAPI injection.
+func ProvideHappyShrimpTokenProvider(
+	accountRepo AccountRepository,
+	tokenCache GeminiTokenCache,
+	happyShrimpOAuthService *HappyShrimpOAuthService,
+	refreshAPI *OAuthRefreshAPI,
+) *HappyShrimpTokenProvider {
+	p := NewHappyShrimpTokenProvider(accountRepo, tokenCache)
+	executor := NewHappyShrimpTokenRefresher(happyShrimpOAuthService)
+	p.SetRefreshAPI(refreshAPI, executor)
+	p.SetRefreshPolicy(HappyShrimpProviderRefreshPolicy())
+	return p
+}
+
+// ProvideHappyShrimpGatewayService creates the Happy Shrimp music generation gateway.
+func ProvideHappyShrimpGatewayService(
+	accountRepo AccountRepository,
+	tokenProvider *HappyShrimpTokenProvider,
+	settingService *SettingService,
+) *HappyShrimpGatewayService {
+	return NewHappyShrimpGatewayService(accountRepo, tokenProvider, settingService)
 }
 
 // ProvideClaudeTokenProvider creates ClaudeTokenProvider with OAuthRefreshAPI injection
@@ -795,6 +828,9 @@ var ProviderSet = wire.NewSet(
 	ProvideGrokQuotaService,
 	ProvideClaudeTokenProvider,
 	NewAntigravityGatewayService,
+	ProvideHappyShrimpOAuthService,
+	ProvideHappyShrimpTokenProvider,
+	ProvideHappyShrimpGatewayService,
 	ProvideRateLimitService,
 	ProvideAccountUsageService,
 	ProvideAccountTestService,
