@@ -78,6 +78,9 @@ func RegisterGatewayRoutes(
 	isOpenAIOnlyEndpointGatewayPlatform := func(c *gin.Context) bool {
 		return getGroupPlatform(c) == service.PlatformOpenAI
 	}
+	isHappyShrimpGatewayPlatform := func(c *gin.Context) bool {
+		return getGroupPlatform(c) == service.PlatformHappyShrimp
+	}
 	imagesHandler := func(c *gin.Context) {
 		switch getGroupPlatform(c) {
 		case service.PlatformOpenAI:
@@ -255,6 +258,21 @@ func RegisterGatewayRoutes(
 		gateway.POST("/images/generations/async", h.AsyncImage.Submit)
 		gateway.POST("/images/edits/async", h.AsyncImage.Submit)
 		gateway.GET("/images/tasks/:task_id", h.AsyncImage.Get)
+		// /v1/audio/generations: Happy Shrimp 音乐生成（异步 create→batch-get 轮询）。
+		// 仅 happy_shrimp 分组支持，其余平台返回 404。
+		gateway.POST("/audio/generations", func(c *gin.Context) {
+			if isHappyShrimpGatewayPlatform(c) {
+				h.Gateway.AudioGenerations(c)
+				return
+			}
+			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": gin.H{
+					"type":    "not_found_error",
+					"message": "Audio Generations API is not supported for this platform",
+				},
+			})
+		})
 		gateway.POST("/images/batches", h.BatchImage.Submit)
 		gateway.GET("/images/batches", h.BatchImage.List)
 		gateway.GET("/images/batches/models", h.BatchImage.Models)

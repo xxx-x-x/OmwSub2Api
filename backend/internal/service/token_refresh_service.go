@@ -170,6 +170,24 @@ func (s *TokenRefreshService) SetPrivacyDeps(factory PrivacyClientFactory, proxy
 	s.proxyRepo = proxyRepo
 }
 
+// SetHappyShrimpRefresher 注入快乐虾米 token 刷新器并注册到后台刷新循环。
+// 快乐虾米为后加入平台，通过 setter 注入避免破坏既有构造函数调用点。
+func (s *TokenRefreshService) SetHappyShrimpRefresher(refresher OAuthRefreshExecutor) {
+	if s == nil || refresher == nil {
+		return
+	}
+	for _, registration := range s.registrations {
+		if registration.platform == PlatformHappyShrimp {
+			return // 已注册，避免重复
+		}
+	}
+	s.registrations = append(s.registrations, tokenRefreshRegistration{
+		platform: PlatformHappyShrimp,
+		refresher: refresher,
+		executor:  refresher,
+	})
+}
+
 // SetRefreshAPI 注入统一的 OAuth 刷新 API
 func (s *TokenRefreshService) SetRefreshAPI(api *OAuthRefreshAPI) {
 	s.refreshAPI = api

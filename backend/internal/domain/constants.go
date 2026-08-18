@@ -27,6 +27,7 @@ const (
 	PlatformKimi      = "kimi"     // Kimi (月之暗面 / Moonshot)
 	PlatformZhipu     = "zhipu"    // 智谱 GLM (bigmodel)
 	PlatformDeepseek  = "deepseek" // DeepSeek
++	PlatformHappyShrimp = "happy_shrimp"
 	PlatformComposite = "composite"
 )
 

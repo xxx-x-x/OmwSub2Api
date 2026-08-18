@@ -55,6 +55,11 @@ const geminiModels = [
   'gemini-3-pro-preview'
 ]
 
+// Happy Shrimp 快乐虾米音乐生成模型
+const happyShrimpModels = [
+  'HappyShrimp'
+]
+
 // Antigravity 官方支持的模型（精确匹配）
 // 基于官方 API 返回的模型列表，只支持 Claude 4.5+ 和 Gemini 2.5+
 const antigravityModels = [
@@ -431,6 +436,7 @@ export function getModelsByPlatform(platform: string): string[] {
     case 'claude': return claudeModels
     case 'gemini': return geminiModels
     case 'antigravity': return antigravityModels
+    case 'happy_shrimp': return happyShrimpModels
     case 'zhipu': return zhipuModels
     case 'qwen': return qwenModels
     case 'deepseek': return deepseekModels

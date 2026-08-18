@@ -160,6 +160,65 @@
             <PlatformIcon platform="grok" size="sm" />
             Grok
           </button>
+          <button
+            type="button"
+            data-testid="platform-happy-shrimp"
+            @click="form.platform = 'happy_shrimp'"
+            :class="[
+              'flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all',
+              form.platform === 'happy_shrimp'
+                ? 'bg-white text-orange-600 shadow-sm dark:bg-dark-600 dark:text-orange-400'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            ]"
+          >
+            <Icon name="play" size="sm" />
+            Happy Shrimp
+          </button>
+        </div>
+      </div>
+
+      <!-- Happy Shrimp: 手工导入 token（access_token + refresh_token） -->
+      <div v-if="form.platform === 'happy_shrimp'" class="mt-4 space-y-4">
+        <div class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800 dark:border-orange-800/40 dark:bg-orange-900/20 dark:text-orange-200">
+          <p>快乐虾米（Happy Shrimp）账号通过网页登录态导入：填写浏览器 Cookie 中的 <code class="rounded bg-orange-100 px-1 dark:bg-orange-900/40">hs_token</code>（access_token）与 localStorage <code class="rounded bg-orange-100 px-1 dark:bg-orange-900/40">hs_auth</code> 中的 refreshToken 与 deviceId。JWT 过期后系统将自动用 refreshToken 续期。</p>
+        </div>
+        <div>
+          <label class="input-label">Access Token (JWT)</label>
+          <input
+            v-model="happyShrimpAccessToken"
+            type="text"
+            class="input"
+            placeholder="eyJhbGciOiJIUzI1NiJ9..."
+            required
+          />
+        </div>
+        <div>
+          <label class="input-label">Refresh Token</label>
+          <input
+            v-model="happyShrimpRefreshToken"
+            type="text"
+            class="input"
+            placeholder="从 localStorage hs_auth 获取"
+            required
+          />
+        </div>
+        <div>
+          <label class="input-label">Device ID</label>
+          <input
+            v-model="happyShrimpDeviceId"
+            type="text"
+            class="input"
+            placeholder="从 localStorage hs_device_id 获取（可选）"
+          />
+        </div>
+        <div>
+          <label class="input-label">User ID / Phone（可选，用于展示）</label>
+          <input
+            v-model="happyShrimpUserId"
+            type="text"
+            class="input"
+            placeholder="JWT payload 中的 userId / phone"
+          />
         </div>
         <!-- CN providers row: Kimi / Zhipu GLM / DeepSeek -->
         <div class="mt-2 flex flex-wrap rounded-lg bg-gray-100 p-1 dark:bg-dark-700">
@@ -4237,6 +4296,12 @@ const headerOverrideRows = ref<HeaderOverrideRow[]>([])
 const grokOAuthCustomBaseUrlEnabled = ref(false)
 const grokOAuthBaseUrl = ref('')
 
+// Happy Shrimp：手工导入 token（access_token + refresh_token + device_id）
+const happyShrimpAccessToken = ref('')
+const happyShrimpRefreshToken = ref('')
+const happyShrimpDeviceId = ref('')
+const happyShrimpUserId = ref('')
+
 // Grok OAuth 三条创建路径（授权码/RT 批量/SSO 批量）共用的前置校验。
 // 授权码路径必须在兑换 code 之前调用，避免校验失败时白白消耗一次性授权码。
 const validateGrokOAuthUpstreamConfig = (): boolean => {
@@ -4578,6 +4643,10 @@ const form = reactive({
 
 // Helper to check if current type needs OAuth flow
 const isOAuthFlow = computed(() => {
+  // Happy Shrimp：手工导入 token，不走 OAuth 授权码流程
+  if (form.platform === 'happy_shrimp') {
+    return false
+  }
   // Antigravity upstream 类型不需要 OAuth 流程
   if (form.platform === 'antigravity' && antigravityAccountType.value === 'upstream') {
     return false
@@ -5189,6 +5258,10 @@ const resetForm = () => {
   openAIImagesUrlToB64JsonEnabled.value = false
   grokOAuthCustomBaseUrlEnabled.value = false
   grokOAuthBaseUrl.value = ''
+  happyShrimpAccessToken.value = ''
+  happyShrimpRefreshToken.value = ''
+  happyShrimpDeviceId.value = ''
+  happyShrimpUserId.value = ''
   interceptWarmupRequests.value = false
   autoPauseOnExpired.value = true
   openaiPassthroughEnabled.value = false
@@ -5574,6 +5647,43 @@ const handleSubmit = async () => {
 
     const extra = buildAntigravityExtra()
     await createAccountAndFinish(form.platform, 'apikey', credentials, extra)
+    return
+  }
+
+  // Happy Shrimp：手工导入 token 直接创建（oauth 类型）
+  if (form.platform === 'happy_shrimp') {
+    if (!form.name.trim()) {
+      appStore.showError(t('admin.accounts.pleaseEnterAccountName'))
+      return
+    }
+    if (!happyShrimpAccessToken.value.trim()) {
+      appStore.showError(t('admin.accounts.happyShrimp.accessTokenRequired'))
+      return
+    }
+    if (!happyShrimpRefreshToken.value.trim()) {
+      appStore.showError(t('admin.accounts.happyShrimp.refreshTokenRequired'))
+      return
+    }
+
+    const credentials: Record<string, unknown> = {
+      access_token: happyShrimpAccessToken.value.trim(),
+      refresh_token: happyShrimpRefreshToken.value.trim()
+    }
+    if (happyShrimpDeviceId.value.trim()) {
+      credentials.device_id = happyShrimpDeviceId.value.trim()
+    }
+    if (happyShrimpUserId.value.trim()) {
+      credentials.user_id = happyShrimpUserId.value.trim()
+    }
+
+    const modelMapping = buildModelMappingObject(
+      modelRestrictionMode.value, allowedModels.value, modelMappings.value
+    )
+    if (modelMapping) {
+      credentials.model_mapping = modelMapping
+    }
+
+    await createAccountAndFinish(form.platform, 'oauth', credentials)
     return
   }
 

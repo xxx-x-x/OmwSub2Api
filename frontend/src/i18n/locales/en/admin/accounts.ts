@@ -977,6 +977,10 @@ export default {
       mixedChannelWarning: 'Warning: Group "{groupName}" contains both {currentPlatform} and {otherPlatform} accounts. Mixing different channels may cause thinking block signature validation issues, which will fallback to non-thinking mode. Are you sure you want to continue?',
       pleaseEnterAccountName: 'Please enter account name',
       pleaseEnterApiKey: 'Please enter API Key',
+      happyShrimp: {
+        accessTokenRequired: 'Please enter the Happy Shrimp access token (JWT from the hs_token cookie)',
+        refreshTokenRequired: 'Please enter the Happy Shrimp refresh token (from localStorage hs_auth)'
+      },
       bedrockAccessKeyId: 'AWS Access Key ID',
       bedrockSecretAccessKey: 'AWS Secret Access Key',
       bedrockSessionToken: 'AWS Session Token',

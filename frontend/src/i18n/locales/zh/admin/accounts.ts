@@ -1047,6 +1047,10 @@ export default {
       mixedChannelWarning: '警告：分组 "{groupName}" 中同时包含 {currentPlatform} 和 {otherPlatform} 账号。混合使用不同渠道可能导致 thinking block 签名验证问题，会自动回退到非 thinking 模式。确定要继续吗？',
       pleaseEnterAccountName: '请输入账号名称',
       pleaseEnterApiKey: '请输入 API Key',
+      happyShrimp: {
+        accessTokenRequired: '请输入快乐虾米 access token（hs_token Cookie 中的 JWT）',
+        refreshTokenRequired: '请输入快乐虾米 refresh token（localStorage hs_auth 中的 refreshToken）'
+      },
       bedrockAccessKeyId: 'AWS Access Key ID',
       bedrockSecretAccessKey: 'AWS Secret Access Key',
       bedrockSessionToken: 'AWS Session Token',
