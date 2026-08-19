@@ -16,6 +16,12 @@
 
 [English](README.md) | 中文 | [日本語](README_JA.md)
 
+<p align="center">
+  <a href="#api-调用文档">
+    <img src="https://img.shields.io/badge/API%20调用文档-点击查看-2ea44f?style=for-the-badge" alt="API 调用文档" />
+  </a>
+</p>
+
 </div>
 
 
@@ -195,23 +201,41 @@ Sub2API 是一个 AI API 网关平台，用于分发和管理 AI 产品订阅的
 - **管理后台** - Web 界面进行监控和管理
 - **外部系统集成** - 支持通过 iframe 嵌入外部系统（如工单等），扩展管理后台功能
 
+## 二开新增功能
+
+> 以下功能为基于上游 sub2api 之外新增的扩展能力。
+
+### 账号兼容
+
+在保留上游全部平台的基础上，额外支持以下账号类型：
+
+| 平台                                                   | 账号类型       | 状态     | 说明                                    |
+| ------------------------------------------------------ | -------------- | -------- | --------------------------------------- |
+| [快乐虾米（Happy Shrimp）](https://www.happyshrimp.cn) | Token（OAuth） | ✅ 已支持 | AI 音乐生成，账号通过网页登录态手工导入 |
+
+#### 快乐虾米（Happy Shrimp）
+
+- 通过网页登录态导入账号：填写浏览器 Cookie 中的 `hs_token`（access_token）与 localStorage `hs_auth` 中的 `refreshToken` 与 `deviceId`
+- JWT 有效期约 7 天，过期后系统自动用 refreshToken 续期（后台轮询刷新 + 请求路径刷新双保险）
+- 支持通过 OpenAI 兼容接口调用 AI 音乐生成，详见 [API 调用文档](#api-调用文档)
+
 ## 生态项目
 
 围绕 Sub2API 的社区扩展与集成项目：
 
-| 项目 | 说明 | 功能 |
-|------|------|------|
-| ~~[Sub2ApiPay](https://github.com/touwaeriol/sub2apipay)~~ | ~~自助支付系统~~ | **已内置** — 支付功能已集成到 Sub2API 中，无需独立部署。详见 [支付配置指南](docs/PAYMENT_CN.md) |
-| [sub2api-mobile](https://github.com/ckken/sub2api-mobile) | 移动端管理控制台 | 跨平台应用（iOS/Android/Web），支持用户管理、账号管理、监控看板、多后端切换；基于 Expo + React Native 构建 |
+| 项目                                                       | 说明             | 功能                                                                                                       |
+| ---------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| ~~[Sub2ApiPay](https://github.com/touwaeriol/sub2apipay)~~ | ~~自助支付系统~~ | **已内置** — 支付功能已集成到 Sub2API 中，无需独立部署。详见 [支付配置指南](docs/PAYMENT_CN.md)            |
+| [sub2api-mobile](https://github.com/ckken/sub2api-mobile)  | 移动端管理控制台 | 跨平台应用（iOS/Android/Web），支持用户管理、账号管理、监控看板、多后端切换；基于 Expo + React Native 构建 |
 
 ## 技术栈
 
-| 组件 | 技术 |
-|------|------|
-| 后端 | Go 1.26.5, Gin, Ent |
-| 前端 | Vue 3.4+, Vite 5+, TailwindCSS |
-| 数据库 | PostgreSQL 15+ |
-| 缓存/队列 | Redis 7+ |
+| 组件      | 技术                           |
+| --------- | ------------------------------ |
+| 后端      | Go 1.26.5, Gin, Ent            |
+| 前端      | Vue 3.4+, Vite 5+, TailwindCSS |
+| 数据库    | PostgreSQL 15+                 |
+| 缓存/队列 | Redis 7+                       |
 
 ---
 
@@ -401,10 +425,10 @@ docker compose -f docker-compose.local.yml logs -f sub2api
 
 #### 部署版本对比
 
-| 版本 | 数据存储 | 迁移便利性 | 适用场景 |
-|------|---------|-----------|---------|
+| 版本                         | 数据存储 | 迁移便利性             | 适用场景           |
+| ---------------------------- | -------- | ---------------------- | ------------------ |
 | **docker-compose.local.yml** | 本地目录 | ✅ 简单（打包整个目录） | 生产环境、频繁备份 |
-| **docker-compose.yml** | 命名卷 | ⚠️ 需要 docker 命令 | 简单设置 |
+| **docker-compose.yml**       | 命名卷   | ⚠️ 需要 docker 命令     | 简单设置           |
 
 **推荐：** 使用 `docker-compose.local.yml`（脚本部署）以便更轻松地管理数据。
 
@@ -747,10 +771,10 @@ Sub2API 支持 [Antigravity](https://antigravity.so/) 账户，授权后可通�
 
 ### 专用端点
 
-| 端点 | 模型 |
-|------|------|
+| 端点                       | 模型        |
+| -------------------------- | ----------- |
 | `/antigravity/v1/messages` | Claude 模型 |
-| `/antigravity/v1beta/` | Gemini 模型 |
+| `/antigravity/v1beta/`     | Gemini 模型 |
 
 ### Claude Code 配置示例
 
@@ -764,6 +788,177 @@ export ANTHROPIC_AUTH_TOKEN="sk-xxx"
 Antigravity 账户支持可选的**混合调度**功能。开启后，通用端点 `/v1/messages` 和 `/v1beta/` 也会调度该账户。
 
 > **⚠️ 注意**：Anthropic Claude 和 Antigravity Claude **不能在同一上下文中混合使用**，请通过分组功能做好隔离。
+
+---
+
+## API 调用文档
+
+本平台兼容 OpenAI API 协议，所有端点统一使用平台生成的 API Key 进行鉴权。
+
+### 鉴权方式
+
+所有请求需在 Header 中携带 API Key：
+
+```bash
+Authorization: Bearer sk-你的APIKey
+```
+
+### 基础信息
+
+| 项目     | 值                             |
+| -------- | ------------------------------ |
+| Base URL | `http://你的服务器IP:8080`     |
+| 鉴权方式 | `Authorization: Bearer sk-xxx` |
+
+### 聊天补全（Chat Completions）
+
+兼容 OpenAI `/v1/chat/completions` 接口，可用于调度 Claude、GPT、Gemini 等各平台模型（具体可用模型由所在分组决定）。
+
+```bash
+curl http://你的服务器IP:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-你的APIKey" \
+  -d '{
+    "model": "claude-sonnet-4-5",
+    "messages": [
+      {"role": "user", "content": "你好"}
+    ]
+  }'
+```
+
+**请求参数：**
+
+| 参数          | 类型    | 必填 | 说明                                                           |
+| ------------- | ------- | ---- | -------------------------------------------------------------- |
+| `model`       | string  | ✅    | 模型名称，如 `claude-sonnet-4-5`、`gpt-5`、`gemini-2.5-pro` 等 |
+| `messages`    | array   | ✅    | 消息列表，格式与 OpenAI 一致                                   |
+| `stream`      | boolean | ❌    | 是否流式返回，默认 `false`                                     |
+| `temperature` | number  | ❌    | 采样温度                                                       |
+| `max_tokens`  | integer | ❌    | 最大生成 token 数                                              |
+
+**响应格式：** 与 OpenAI Chat Completions 响应结构一致。
+
+### 文本补全（Completions）
+
+兼容 OpenAI `/v1/completions` 接口：
+
+```bash
+curl http://你的服务器IP:8080/v1/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-你的APIKey" \
+  -d '{
+    "model": "gpt-5",
+    "prompt": "写一首关于春天的诗"
+  }'
+```
+
+### 图片生成（Images）
+
+兼容 OpenAI `/v1/images/generations` 接口（需所在分组配置了图片模型账号，如 gpt-image）：
+
+```bash
+curl http://你的服务器IP:8080/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-你的APIKey" \
+  -d '{
+    "model": "gpt-image-1",
+    "prompt": "一只在月球上喝咖啡的猫",
+    "n": 1,
+    "size": "1024x1024"
+  }'
+```
+
+### 模型列表
+
+```bash
+curl http://你的服务器IP:8080/v1/models \
+  -H "Authorization: Bearer sk-你的APIKey"
+```
+
+返回当前分组可用的模型列表（JSON 格式，`data` 字段为模型数组）。
+
+### 余额 / 用量查询
+
+```bash
+curl http://你的服务器IP:8080/v1/sub2api/billing \
+  -H "Authorization: Bearer sk-你的APIKey"
+```
+
+返回当前 API Key 的余额、额度等信息（JSON 格式）。
+
+### 音乐生成（快乐虾米 · 二开新增）
+
+> 二开新增能力：通过 OpenAI 兼容接口调用[快乐虾米](#快乐虾米happy-shrimp) AI 音乐生成。需在管理后台创建 `happy_shrimp` 平台账号并放入分组。
+
+**端点：** `POST /v1/audio/generations`
+
+**请求示例：**
+
+```bash
+curl http://你的服务器IP:8080/v1/audio/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-你的APIKey" \
+  -d '{
+    "model": "HappyShrimp",
+    "prompt": "一首轻快的国风电子音乐，笛子主旋律",
+    "n": 1,
+    "instrumental": false
+  }'
+```
+
+**请求参数：**
+
+| 参数           | 类型    | 必填 | 说明                                         |
+| -------------- | ------- | ---- | -------------------------------------------- |
+| `model`        | string  | ❌    | 模型名称，固定为 `HappyShrimp`（不填则默认） |
+| `prompt`       | string  | ✅    | 音乐生成提示词（歌曲描述）                   |
+| `n`            | integer | ❌    | 生成歌曲数量，1-8，默认 `1`                  |
+| `instrumental` | boolean | ❌    | 是否纯音乐（无人声），默认 `false`           |
+| `source`       | string  | ❌    | 生成来源，默认 `ORIGINAL`                    |
+
+**成功响应：**
+
+```json
+{
+  "data": [
+    {
+      "id": "HSSGxxxxxxxx",
+      "title": "曲名",
+      "duration_ms": 116100,
+      "url": "https://cdn.../xxx.mp3",
+      "cover_url": "https://cdn.../cover.jpg",
+      "instrumental": false,
+      "tags": [
+        {"dim": "genre", "name": "国风", "conf": 0.92}
+      ]
+    }
+  ]
+}
+```
+
+**响应字段说明：**
+
+| 字段                  | 说明                 |
+| --------------------- | -------------------- |
+| `data[].id`           | 歌曲 ID              |
+| `data[].title`        | 歌曲标题             |
+| `data[].duration_ms`  | 歌曲时长（毫秒）     |
+| `data[].url`          | 音频文件直链（MP3）  |
+| `data[].cover_url`    | 封面图地址（可选）   |
+| `data[].instrumental` | 是否纯音乐           |
+| `data[].tags`         | 音乐风格标签（可选） |
+
+> **说明：** 快乐虾米上游为异步 create→轮询协议，本接口内部自动完成创建任务与轮询等待（约 1 分钟），调用方无需处理异步逻辑。
+
+### 其他 OpenAI 兼容端点
+
+平台还兼容以下常用端点（路径均为 `/v1/...`）：
+
+| 端点                       | 说明                               |
+| -------------------------- | ---------------------------------- |
+| `/v1/embeddings`           | 向量嵌入（需分组配置嵌入模型账号） |
+| `/v1/audio/transcriptions` | 语音转文字                         |
+| `/v1/audio/speech`         | 文字转语音                         |
 
 ---
 

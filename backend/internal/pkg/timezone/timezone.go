@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	// 嵌入 IANA tzdata：Windows 等无系统时区库的平台也能解析 "Asia/Shanghai" 等。
+	// 系统存在 tzdata 时优先使用系统数据，行为与之前一致。
+	_ "time/tzdata"
 )
 
 var (
