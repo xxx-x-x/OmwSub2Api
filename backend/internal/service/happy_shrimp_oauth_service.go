@@ -2,14 +2,18 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
-	"github.com/Wei-Shaw/sub2api/internal/config"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/happyshrimp"
-	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"net/http"
+
+	"github.com/Wei-Shaw/sub2api/internal/config"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/happyshrimp"
 )
 
 // happyShrimpAccessTokenTTL 是 access token 的期望有效期。
@@ -25,6 +29,53 @@ type HappyShrimpTokenInfo struct {
 	DeviceID        string
 	UserID          string
 	Phone           string
+}
+
+// SendSMSCode 请求快乐虾米发送登录验证码。
+func (s *HappyShrimpOAuthService) SendSMSCode(ctx context.Context, phone, phoneCountryCode string) (int64, error) {
+	if s == nil {
+		return 0, errors.New("happy shrimp oauth service is nil")
+	}
+	client, err := s.client(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	return client.SendSMSCode(ctx, strings.TrimSpace(phone), strings.TrimSpace(phoneCountryCode))
+}
+
+// SMSLogin 使用验证码登录快乐虾米并构建账号凭据。
+func (s *HappyShrimpOAuthService) SMSLogin(ctx context.Context, phone, phoneCountryCode, code string) (*HappyShrimpTokenInfo, error) {
+	if s == nil {
+		return nil, errors.New("happy shrimp oauth service is nil")
+	}
+	deviceIDBytes := make([]byte, 16)
+	if _, err := rand.Read(deviceIDBytes); err != nil {
+		return nil, fmt.Errorf("generate device id: %w", err)
+	}
+	client, err := s.client(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.SMSLogin(ctx, &happyshrimp.SMSLoginRequest{
+		Phone: strings.TrimSpace(phone), PhoneCountryCode: strings.TrimSpace(phoneCountryCode),
+		Code: strings.TrimSpace(code), DeviceID: hex.EncodeToString(deviceIDBytes),
+		DeviceType: "web", DeviceName: "browser", DeviceModel: "Web", AppVersion: "1.0.0",
+	})
+	if err != nil {
+		return nil, err
+	}
+	info := &HappyShrimpTokenInfo{
+		AccessToken: resp.Data.Token.AccessToken, RefreshToken: resp.Data.Token.RefreshToken,
+		AccessExpiresIn: resp.Data.Token.AccessExpiresIn, DeviceID: hex.EncodeToString(deviceIDBytes),
+		UserID: fmt.Sprintf("%d", resp.Data.User.ID), Phone: resp.Data.User.Phone,
+	}
+	if info.Phone == "" {
+		info.Phone = strings.TrimSpace(phone)
+	}
+	if info.AccessExpiresIn <= 0 {
+		info.AccessExpiresIn = int64(happyShrimpAccessTokenTTL / time.Second)
+	}
+	return info, nil
 }
 
 // HappyShrimpOAuthService 负责快乐虾米 token 刷新与凭据构建。

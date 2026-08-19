@@ -64,6 +64,7 @@ type AccountHandler struct {
 	grokImportProber        grokImportProber
 	upstreamBillingProbe    *service.UpstreamBillingProbeService
 	ollamaCloudUsage        *service.OllamaCloudUsageService
+	happyShrimpOAuthService *service.HappyShrimpOAuthService
 }
 
 // SetUpstreamBillingProbeService attaches the optional remote billing probe service.
@@ -73,6 +74,11 @@ func (h *AccountHandler) SetUpstreamBillingProbeService(probe *service.UpstreamB
 
 func (h *AccountHandler) SetOllamaCloudUsageService(usage *service.OllamaCloudUsageService) {
 	h.ollamaCloudUsage = usage
+}
+
+// SetHappyShrimpOAuthService attaches the Happy Shrimp login service.
+func (h *AccountHandler) SetHappyShrimpOAuthService(oauth *service.HappyShrimpOAuthService) {
+	h.happyShrimpOAuthService = oauth
 }
 
 // NewAccountHandler creates a new admin account handler
@@ -960,6 +966,62 @@ func (h *AccountHandler) Create(c *gin.Context) {
 	h.scheduleOpenAIResponsesProbe(createdAccount)
 	h.scheduleGrokImportProbe(createdAccount)
 	response.Success(c, result.Data)
+}
+
+type happyShrimpSMSRequest struct {
+	Phone            string `json:"phone" binding:"required"`
+	PhoneCountryCode string `json:"phone_country_code" binding:"required"`
+}
+
+type happyShrimpSMSLoginRequest struct {
+	Phone            string `json:"phone" binding:"required"`
+	PhoneCountryCode string `json:"phone_country_code" binding:"required"`
+	Code             string `json:"code" binding:"required"`
+}
+
+// SendHappyShrimpSMSCode sends a login verification code through Happy Shrimp.
+func (h *AccountHandler) SendHappyShrimpSMSCode(c *gin.Context) {
+	var req happyShrimpSMSRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	if h.happyShrimpOAuthService == nil {
+		response.BadRequest(c, "Happy Shrimp OAuth service is unavailable")
+		return
+	}
+	expiresIn, err := h.happyShrimpOAuthService.SendSMSCode(c.Request.Context(), req.Phone, req.PhoneCountryCode)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{"expires_in": expiresIn})
+}
+
+// LoginHappyShrimpBySMS logs in through Happy Shrimp and returns credentials for account creation.
+func (h *AccountHandler) LoginHappyShrimpBySMS(c *gin.Context) {
+	var req happyShrimpSMSLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	if h.happyShrimpOAuthService == nil {
+		response.BadRequest(c, "Happy Shrimp OAuth service is unavailable")
+		return
+	}
+	info, err := h.happyShrimpOAuthService.SMSLogin(c.Request.Context(), req.Phone, req.PhoneCountryCode, req.Code)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, gin.H{
+		"access_token":  info.AccessToken,
+		"refresh_token": info.RefreshToken,
+		"device_id":     info.DeviceID,
+		"user_id":       info.UserID,
+		"phone":         info.Phone,
+		"expires_in":    info.AccessExpiresIn,
+	})
 }
 
 // Duplicate handles creating an independent account from an existing account's configuration.

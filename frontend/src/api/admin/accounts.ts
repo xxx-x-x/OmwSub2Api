@@ -183,6 +183,36 @@ export async function create(accountData: CreateAccountRequest): Promise<Account
   return data
 }
 
+export interface HappyShrimpSMSCredentials {
+  access_token: string
+  refresh_token: string
+  device_id: string
+  user_id: string
+  phone: string
+  expires_in: number
+}
+
+export async function sendHappyShrimpSMSCode(phone: string, phoneCountryCode = '86'): Promise<{ expires_in: number }> {
+  const { data } = await apiClient.post<{ expires_in: number }>('/admin/accounts/happy-shrimp/sms/send', {
+    phone,
+    phone_country_code: phoneCountryCode
+  })
+  return data
+}
+
+export async function loginHappyShrimpBySMS(
+  phone: string,
+  code: string,
+  phoneCountryCode = '86'
+): Promise<HappyShrimpSMSCredentials> {
+  const { data } = await apiClient.post<HappyShrimpSMSCredentials>('/admin/accounts/happy-shrimp/sms/login', {
+    phone,
+    code,
+    phone_country_code: phoneCountryCode
+  })
+  return data
+}
+
 /**
  * Duplicate an account while keeping credentials on the server.
  * @param id - Source account ID
@@ -513,12 +543,12 @@ export async function bulkUpdate(
   failed_ids?: number[]
   long_context_inherited_count?: number
   results: Array<{ account_id: number; success: boolean; error?: string }>
-  }> {
+}> {
   const payload = Array.isArray(accountIdsOrPayload)
     ? {
-        account_ids: accountIdsOrPayload,
-        ...(updates ?? {})
-      }
+      account_ids: accountIdsOrPayload,
+      ...(updates ?? {})
+    }
     : accountIdsOrPayload
   const { data } = await apiClient.post<{
     success: number
@@ -915,9 +945,9 @@ export interface OpenAIQuotaResetResult {
   cache_refreshed: boolean
   account_state_recovered: boolean
   warning_code?:
-    | 'reset_credit_cache_refresh_failed'
-    | 'account_state_recovery_failed'
-    | 'account_state_refresh_failed'
+  | 'reset_credit_cache_refresh_failed'
+  | 'account_state_recovery_failed'
+  | 'account_state_refresh_failed'
 }
 
 /** Usage payload plus whether the reset-credit snapshot was persisted. */
@@ -1052,6 +1082,8 @@ export const accountsAPI = {
   getUpstreamBillingRatesWithEtag,
   getById,
   create,
+  sendHappyShrimpSMSCode,
+  loginHappyShrimpBySMS,
   duplicate,
   update,
   checkMixedChannelRisk,

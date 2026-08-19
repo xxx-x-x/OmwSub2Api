@@ -177,48 +177,54 @@
         </div>
       </div>
 
-      <!-- Happy Shrimp: 手工导入 token（access_token + refresh_token） -->
+      <!-- Happy Shrimp: 短信登录或手工导入 token -->
       <div v-if="form.platform === 'happy_shrimp'" class="mt-4 space-y-4">
         <div class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800 dark:border-orange-800/40 dark:bg-orange-900/20 dark:text-orange-200">
-          <p>快乐虾米（Happy Shrimp）账号通过网页登录态导入：填写浏览器 Cookie 中的 <code class="rounded bg-orange-100 px-1 dark:bg-orange-900/40">hs_token</code>（access_token）与 localStorage <code class="rounded bg-orange-100 px-1 dark:bg-orange-900/40">hs_auth</code> 中的 refreshToken 与 deviceId。JWT 过期后系统将自动用 refreshToken 续期。</p>
+          <p>推荐使用手机号验证码登录，登录成功后系统会自动获取并填充凭据。JWT 过期后系统将自动续期。</p>
         </div>
-        <div>
-          <label class="input-label">Access Token (JWT)</label>
-          <input
-            v-model="happyShrimpAccessToken"
-            type="text"
-            class="input"
-            placeholder="eyJhbGciOiJIUzI1NiJ9..."
-            required
-          />
+        <div class="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-1 dark:bg-dark-700">
+          <button type="button" class="rounded-md px-3 py-2 text-sm" :class="happyShrimpLoginMode === 'sms' ? 'bg-white font-medium text-orange-600 shadow-sm dark:bg-dark-600' : 'text-gray-500'" @click="happyShrimpLoginMode = 'sms'">短信登录</button>
+          <button type="button" class="rounded-md px-3 py-2 text-sm" :class="happyShrimpLoginMode === 'manual' ? 'bg-white font-medium text-orange-600 shadow-sm dark:bg-dark-600' : 'text-gray-500'" @click="happyShrimpLoginMode = 'manual'">手动导入</button>
         </div>
-        <div>
-          <label class="input-label">Refresh Token</label>
-          <input
-            v-model="happyShrimpRefreshToken"
-            type="text"
-            class="input"
-            placeholder="从 localStorage hs_auth 获取"
-            required
-          />
-        </div>
-        <div>
-          <label class="input-label">Device ID</label>
-          <input
-            v-model="happyShrimpDeviceId"
-            type="text"
-            class="input"
-            placeholder="从 localStorage hs_device_id 获取（可选）"
-          />
-        </div>
-        <div>
+        <template v-if="happyShrimpLoginMode === 'sms'">
+          <div>
+            <label class="input-label">手机号</label>
+            <div class="flex gap-2">
+              <input v-model="happyShrimpCountryCode" class="input w-24" placeholder="86" />
+              <input v-model="happyShrimpPhone" class="input flex-1" inputmode="tel" placeholder="请输入快乐虾米登录手机号" />
+              <button type="button" class="btn btn-secondary whitespace-nowrap" :disabled="happyShrimpSMSLoading || happyShrimpCountdown > 0" @click="sendHappyShrimpCode">
+                {{ happyShrimpCountdown > 0 ? `${happyShrimpCountdown}s` : happyShrimpSMSLoading ? '发送中...' : '发送验证码' }}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="input-label">短信验证码</label>
+            <div class="flex gap-2">
+              <input v-model="happyShrimpCode" class="input flex-1" inputmode="numeric" placeholder="请输入验证码" />
+              <button type="button" class="btn btn-primary whitespace-nowrap" :disabled="happyShrimpLoginLoading || happyShrimpLoggedIn" @click="loginHappyShrimp">
+                {{ happyShrimpLoggedIn ? '已登录' : happyShrimpLoginLoading ? '登录中...' : '登录并获取凭据' }}
+              </button>
+            </div>
+            <p v-if="happyShrimpLoggedIn" class="mt-2 text-sm text-green-600 dark:text-green-400">登录成功，凭据已自动填充，可以创建账号。</p>
+          </div>
+        </template>
+        <template v-else>
+          <div>
+            <label class="input-label">Access Token (JWT)</label>
+            <input v-model="happyShrimpAccessToken" type="text" class="input" placeholder="eyJhbGciOiJIUzI1NiJ9..." />
+          </div>
+          <div>
+            <label class="input-label">Refresh Token</label>
+            <input v-model="happyShrimpRefreshToken" type="text" class="input" placeholder="从 localStorage hs_auth 获取" />
+          </div>
+          <div>
+            <label class="input-label">Device ID（可选）</label>
+            <input v-model="happyShrimpDeviceId" type="text" class="input" placeholder="从 localStorage hs_device_id 获取" />
+          </div>
+        </template>
+        <div v-if="happyShrimpLoggedIn || happyShrimpLoginMode === 'manual'">
           <label class="input-label">User ID / Phone（可选，用于展示）</label>
-          <input
-            v-model="happyShrimpUserId"
-            type="text"
-            class="input"
-            placeholder="JWT payload 中的 userId / phone"
-          />
+          <input v-model="happyShrimpUserId" type="text" class="input" />
         </div>
         <!-- CN providers row: Kimi / Zhipu GLM / DeepSeek -->
         <div class="mt-2 flex flex-wrap rounded-lg bg-gray-100 p-1 dark:bg-dark-700">
@@ -4296,11 +4302,62 @@ const headerOverrideRows = ref<HeaderOverrideRow[]>([])
 const grokOAuthCustomBaseUrlEnabled = ref(false)
 const grokOAuthBaseUrl = ref('')
 
-// Happy Shrimp：手工导入 token（access_token + refresh_token + device_id）
+// Happy Shrimp：短信登录或手工导入 token
+const happyShrimpLoginMode = ref<'sms' | 'manual'>('sms')
+const happyShrimpCountryCode = ref('86')
+const happyShrimpPhone = ref('')
+const happyShrimpCode = ref('')
+const happyShrimpSMSLoading = ref(false)
+const happyShrimpLoginLoading = ref(false)
+const happyShrimpCountdown = ref(0)
+const happyShrimpLoggedIn = ref(false)
 const happyShrimpAccessToken = ref('')
 const happyShrimpRefreshToken = ref('')
 const happyShrimpDeviceId = ref('')
 const happyShrimpUserId = ref('')
+
+async function sendHappyShrimpCode() {
+  if (!happyShrimpPhone.value.trim()) {
+    appStore.showError('请输入手机号')
+    return
+  }
+  happyShrimpSMSLoading.value = true
+  try {
+    await adminAPI.accounts.sendHappyShrimpSMSCode(happyShrimpPhone.value.trim(), happyShrimpCountryCode.value.trim() || '86')
+    appStore.showSuccess('验证码已发送')
+    happyShrimpCountdown.value = 60
+    const timer = window.setInterval(() => {
+      happyShrimpCountdown.value -= 1
+      if (happyShrimpCountdown.value <= 0) window.clearInterval(timer)
+    }, 1000)
+  } catch (error) {
+    appStore.showError(error instanceof Error ? error.message : '发送验证码失败')
+  } finally {
+    happyShrimpSMSLoading.value = false
+  }
+}
+
+async function loginHappyShrimp() {
+  if (!happyShrimpPhone.value.trim() || !happyShrimpCode.value.trim()) {
+    appStore.showError('请输入手机号和验证码')
+    return
+  }
+  happyShrimpLoginLoading.value = true
+  try {
+    const result = await adminAPI.accounts.loginHappyShrimpBySMS(happyShrimpPhone.value.trim(), happyShrimpCode.value.trim(), happyShrimpCountryCode.value.trim() || '86')
+    happyShrimpAccessToken.value = result.access_token
+    happyShrimpRefreshToken.value = result.refresh_token
+    happyShrimpDeviceId.value = result.device_id
+    happyShrimpUserId.value = result.user_id || result.phone
+    happyShrimpLoggedIn.value = true
+    if (!form.name.trim()) form.name = `Happy Shrimp ${result.phone || happyShrimpPhone.value.trim()}`
+    appStore.showSuccess('快乐虾米登录成功')
+  } catch (error) {
+    appStore.showError(error instanceof Error ? error.message : '登录失败')
+  } finally {
+    happyShrimpLoginLoading.value = false
+  }
+}
 
 // Grok OAuth 三条创建路径（授权码/RT 批量/SSO 批量）共用的前置校验。
 // 授权码路径必须在兑换 code 之前调用，避免校验失败时白白消耗一次性授权码。
@@ -5258,6 +5315,14 @@ const resetForm = () => {
   openAIImagesUrlToB64JsonEnabled.value = false
   grokOAuthCustomBaseUrlEnabled.value = false
   grokOAuthBaseUrl.value = ''
+  happyShrimpLoginMode.value = 'sms'
+  happyShrimpCountryCode.value = '86'
+  happyShrimpPhone.value = ''
+  happyShrimpCode.value = ''
+  happyShrimpSMSLoading.value = false
+  happyShrimpLoginLoading.value = false
+  happyShrimpCountdown.value = 0
+  happyShrimpLoggedIn.value = false
   happyShrimpAccessToken.value = ''
   happyShrimpRefreshToken.value = ''
   happyShrimpDeviceId.value = ''

@@ -260,8 +260,8 @@ type Song struct {
 
 // Tag 歌曲标签。
 type Tag struct {
-	Dim string  `json:"dim"`
-	Tag string  `json:"tag"`
+	Dim  string  `json:"dim"`
+	Tag  string  `json:"tag"`
 	Conf float64 `json:"conf"`
 }
 
@@ -294,6 +294,44 @@ type CreditsQueryResponse struct {
 // RefreshTokenRequest 刷新 JWT 请求。
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refreshToken"`
+}
+
+// SendSMSCodeRequest 请求快乐虾米发送登录验证码。
+type SendSMSCodeRequest struct {
+	Phone            string `json:"phone"`
+	PhoneCountryCode string `json:"phoneCountryCode"`
+}
+
+// SendSMSCodeResponse 快乐虾米发送验证码响应。
+type SendSMSCodeResponse struct {
+	ErrorEnvelope
+	Data struct {
+		ExpiresIn int64 `json:"expiresIn"`
+	} `json:"data"`
+}
+
+// SMSLoginRequest 快乐虾米短信登录请求。
+type SMSLoginRequest struct {
+	Phone            string `json:"phone"`
+	PhoneCountryCode string `json:"phoneCountryCode"`
+	Code             string `json:"code"`
+	DeviceID         string `json:"deviceId"`
+	DeviceType       string `json:"deviceType"`
+	DeviceName       string `json:"deviceName"`
+	DeviceModel      string `json:"deviceModel"`
+	AppVersion       string `json:"appVersion"`
+}
+
+// SMSLoginResponse 快乐虾米短信登录响应。
+type SMSLoginResponse struct {
+	ErrorEnvelope
+	Data struct {
+		User struct {
+			ID    int64  `json:"id"`
+			Phone string `json:"phone"`
+		} `json:"user"`
+		Token TokenInfo `json:"token"`
+	} `json:"data"`
 }
 
 // TokenInfo 刷新/登录返回的 token 信息。
@@ -407,6 +445,39 @@ func (c *Client) GetCredits(ctx context.Context, accessToken string) (int64, err
 		return 0, err
 	}
 	return resp.Data, nil
+}
+
+// SendSMSCode 请求快乐虾米发送短信验证码。
+func (c *Client) SendSMSCode(ctx context.Context, phone, phoneCountryCode string) (int64, error) {
+	var resp SendSMSCodeResponse
+	err := c.doJSON(ctx, http.MethodPost, "/api/v1/auth/sms/send", "", &SendSMSCodeRequest{
+		Phone: phone, PhoneCountryCode: phoneCountryCode,
+	}, &resp)
+	if err != nil {
+		return 0, err
+	}
+	if err := resp.businessError(); err != nil {
+		return 0, err
+	}
+	return resp.Data.ExpiresIn, nil
+}
+
+// SMSLogin 使用短信验证码登录并取得 access/refresh token。
+func (c *Client) SMSLogin(ctx context.Context, req *SMSLoginRequest) (*SMSLoginResponse, error) {
+	if req == nil {
+		return nil, errors.New("sms login request is nil")
+	}
+	var resp SMSLoginResponse
+	if err := c.doJSON(ctx, http.MethodPost, "/api/v1/auth/sms/login", "", req, &resp); err != nil {
+		return nil, err
+	}
+	if err := resp.businessError(); err != nil {
+		return nil, err
+	}
+	if resp.Data.Token.AccessToken == "" || resp.Data.Token.RefreshToken == "" {
+		return nil, errors.New("sms login returned incomplete token")
+	}
+	return &resp, nil
 }
 
 // RefreshToken 用 refreshToken 换新 token。
