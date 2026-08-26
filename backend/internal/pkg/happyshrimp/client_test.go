@@ -144,7 +144,7 @@ func TestPollGenerationResult_TimesOut(t *testing.T) {
 
 func TestRefreshToken_FlatShape(t *testing.T) {
 	client, server := startTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v1/auth/token/refresh", r.URL.Path)
+		assert.Equal(t, "/api/v1/auth/token/refresh", r.URL.Path)
 		assert.Empty(t, r.Header.Get("Authorization"), "refresh 不应带 access token")
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success":true,"data":{"accessToken":"new-jwt","refreshToken":"new-refresh","accessExpiresIn":604800}}`))
