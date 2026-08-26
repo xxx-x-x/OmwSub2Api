@@ -1356,6 +1356,16 @@ func (h *AccountHandler) refreshSingleAccount(ctx context.Context, account *serv
 		if baseURL := strings.TrimSpace(account.GetCredential("base_url")); baseURL != "" {
 			newCredentials["base_url"] = baseURL
 		}
+	} else if account.Platform == service.PlatformHappyShrimp {
+		if h.happyShrimpOAuthService == nil {
+			return nil, "", fmt.Errorf("happy shrimp oauth service is not configured")
+		}
+		tokenInfo, err := h.happyShrimpOAuthService.RefreshAccountToken(ctx, account)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to refresh Happy Shrimp credentials: %w", err)
+		}
+
+		newCredentials = service.MergeCredentials(account.Credentials, h.happyShrimpOAuthService.BuildAccountCredentials(tokenInfo))
 	} else {
 		// Use Anthropic/Claude OAuth service to refresh token
 		tokenInfo, err := h.oauthService.RefreshAccountToken(ctx, account)

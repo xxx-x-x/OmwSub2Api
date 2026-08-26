@@ -6092,7 +6092,10 @@ const handleCreateGroup = async () => {
     }
   } catch (error: any) {
     appStore.showError(
-      error.response?.data?.detail || t("admin.groups.failedToCreate"),
+      error.message ||
+        error.response?.data?.message ||
+        error.response?.data?.detail ||
+        t("admin.groups.failedToCreate"),
     );
     console.error("Error creating group:", error);
     // Don't advance tour on error

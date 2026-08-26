@@ -6,7 +6,7 @@
 //   - POST /api/v1/generation/batch-get 轮询批量查询任务/歌曲结果
 //   - POST /api/v1/generation/price     查询按 prompt 计费的价格
 //   - POST /api/v1/credits/query        查询账户积分余额
-//   - POST /v1/auth/token/refresh       用 refreshToken 换新 JWT
+//   - POST /api/v1/auth/token/refresh   用 refreshToken 换新 JWT
 //
 // Authentication is a HS256 JWT access token carried as
 // `Authorization: Bearer <jwt>`, plus static headers X-App-Id: shrimp_cn
@@ -487,7 +487,7 @@ func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*TokenI
 		return nil, errors.New("refresh_token is required")
 	}
 	var resp RefreshTokenResponse
-	if err := c.doJSON(ctx, http.MethodPost, "/v1/auth/token/refresh", "", &RefreshTokenRequest{RefreshToken: refreshToken}, &resp); err != nil {
+	if err := c.doJSON(ctx, http.MethodPost, "/api/v1/auth/token/refresh", "", &RefreshTokenRequest{RefreshToken: refreshToken}, &resp); err != nil {
 		return nil, err
 	}
 	if err := resp.businessError(); err != nil {
