@@ -157,3 +157,6 @@ output/
 .vite/
 # 本地闭源插件开发目录及构建产物不进入 Sub2API 仓库
 /plugins/
+
+# 误将 psql \d 命令输出重定向生成的本地文件
+/deploy/ql -h localhost -U sub2api -d sub2api -c \\d users
