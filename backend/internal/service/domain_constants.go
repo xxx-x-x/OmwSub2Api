@@ -106,6 +106,7 @@ var AllowedQuotaPlatforms = []string{
 	PlatformGemini,
 	PlatformAntigravity,
 	PlatformGrok,
+	PlatformHappyShrimp,
 	PlatformKimi,
 	PlatformZhipu,
 	PlatformDeepseek,
