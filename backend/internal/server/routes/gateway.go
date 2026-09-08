@@ -528,7 +528,6 @@ func RegisterGatewayRoutes(
 	copilotV1.Use(endpointNorm)
 	copilotV1.Use(middleware.ForcePlatform(service.PlatformCopilot))
 	copilotV1.Use(gin.HandlerFunc(apiKeyAuth))
-	copilotV1.Use(groupModelAllowlist)
 	copilotV1.Use(requireGroupAnthropic)
 	{
 		copilotV1.POST("/chat/completions", h.CopilotGateway.ChatCompletions)
