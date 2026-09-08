@@ -288,6 +288,7 @@ func ProvideAccountTestService(
 	openAIGatewayService *OpenAIGatewayService,
 	settingService *SettingService,
 	pluginManager *PluginManager,
+	copilotGatewayService *CopilotGatewayService,
 ) *AccountTestService {
 	service := NewAccountTestService(
 		accountRepo,
@@ -302,6 +303,7 @@ func ProvideAccountTestService(
 	service.agentIdentityWS = openAIGatewayService
 	service.SetSettingService(settingService)
 	service.SetPluginManager(pluginManager)
+	service.SetCopilotGatewayService(copilotGatewayService)
 	return service
 }
 

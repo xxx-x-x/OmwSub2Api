@@ -66,6 +66,7 @@ type AccountHandler struct {
 	upstreamBillingProbe    *service.UpstreamBillingProbeService
 	ollamaCloudUsage        *service.OllamaCloudUsageService
 	happyShrimpOAuthService *service.HappyShrimpOAuthService
+	copilotGatewayService   *service.CopilotGatewayService
 }
 
 // SetUpstreamBillingProbeService attaches the optional remote billing probe service.
@@ -80,6 +81,10 @@ func (h *AccountHandler) SetOllamaCloudUsageService(usage *service.OllamaCloudUs
 // SetHappyShrimpOAuthService attaches the Happy Shrimp login service.
 func (h *AccountHandler) SetHappyShrimpOAuthService(oauth *service.HappyShrimpOAuthService) {
 	h.happyShrimpOAuthService = oauth
+}
+
+func (h *AccountHandler) SetCopilotGatewayService(gateway *service.CopilotGatewayService) {
+	h.copilotGatewayService = gateway
 }
 
 // NewAccountHandler creates a new admin account handler
@@ -115,6 +120,34 @@ func NewAccountHandler(
 		rpmCache:                rpmCache,
 		tokenCacheInvalidator:   tokenCacheInvalidator,
 	}
+}
+
+// GetCopilotQuota returns the current Copilot plan and premium interaction quota.
+func (h *AccountHandler) GetCopilotQuota(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+	account, err := h.adminService.GetAccount(c.Request.Context(), accountID)
+	if err != nil {
+		response.NotFound(c, "Account not found")
+		return
+	}
+	if account.Platform != service.PlatformCopilot {
+		response.BadRequest(c, "Account is not a Copilot account")
+		return
+	}
+	if h.copilotGatewayService == nil {
+		response.InternalError(c, "Copilot quota service is unavailable")
+		return
+	}
+	quota, err := h.copilotGatewayService.FetchQuota(c.Request.Context(), account)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	response.Success(c, quota)
 }
 
 // CreateAccountRequest represents create account request

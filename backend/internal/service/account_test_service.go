@@ -28,6 +28,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/copilot"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai_compat"
@@ -151,6 +152,7 @@ type AccountTestService struct {
 	modelMetadataRegistry     map[string]modelsDevProvider
 	modelMetadataRegistryAt   time.Time
 	pluginManager             *PluginManager
+	copilotGatewayService     *CopilotGatewayService
 	agentIdentityTaskMu       sync.Mutex
 	agentIdentityWS           agentIdentityWSConnectionInvalidator
 	// grokWSDialer is optional; realtime account tests use the default OpenAI-style
@@ -167,6 +169,12 @@ func (s *AccountTestService) SetSettingService(settingService *SettingService) {
 func (s *AccountTestService) SetPluginManager(pluginManager *PluginManager) {
 	if s != nil {
 		s.pluginManager = pluginManager
+	}
+}
+
+func (s *AccountTestService) SetCopilotGatewayService(gateway *CopilotGatewayService) {
+	if s != nil {
+		s.copilotGatewayService = gateway
 	}
 }
 
@@ -323,6 +331,35 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 
 	if account.Platform == PlatformAntigravity {
 		return s.routeAntigravityTest(c, account, modelID, prompt)
+	}
+
+	if account.Platform == PlatformCopilot {
+		if s.copilotGatewayService == nil {
+			return s.sendErrorAndEnd(c, "Copilot test service is unavailable")
+		}
+		testModelID := strings.TrimSpace(modelID)
+		if testModelID == "" {
+			testModelID = copilot.DefaultTestModel
+		}
+		body, err := json.Marshal(map[string]any{
+			"model": testModelID,
+			"messages": []map[string]string{{
+				"role":    "user",
+				"content": firstNonEmpty(prompt, "Say hello in one short sentence."),
+			}},
+			"max_tokens": 50,
+			"stream":     true,
+		})
+		if err != nil {
+			return s.sendErrorAndEnd(c, "Failed to build Copilot test request")
+		}
+		s.sendEvent(c, TestEvent{Type: "test_start", Model: testModelID})
+		_, err = s.copilotGatewayService.ForwardChatCompletions(ctx, c, account, body)
+		if err != nil {
+			return s.sendErrorAndEnd(c, err.Error())
+		}
+		s.sendEvent(c, TestEvent{Type: "test_complete", Success: true})
+		return nil
 	}
 
 	return s.testClaudeAccountConnection(c, account, modelID)

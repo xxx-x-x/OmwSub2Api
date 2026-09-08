@@ -362,6 +362,7 @@ func registerAccountRoutes(admin *gin.RouterGroup, h *handler.Handlers, stepUpAu
 	{
 		accounts.GET("", h.Admin.Account.List)
 		accounts.GET("/upstream-billing-rates", h.Admin.Account.GetUpstreamBillingRates)
+		accounts.GET("/:id/copilot-quota", h.Admin.Account.GetCopilotQuota)
 		accounts.POST("/happy-shrimp/sms/send", h.Admin.Account.SendHappyShrimpSMSCode)
 		accounts.POST("/happy-shrimp/sms/login", h.Admin.Account.LoginHappyShrimpBySMS)
 		accounts.GET("/upstream-billing-probe/settings", h.Admin.Account.GetUpstreamBillingProbeSettings)

@@ -610,6 +610,26 @@ export async function getAvailableModels(id: number): Promise<ClaudeModel[]> {
   return data
 }
 
+export interface CopilotQuotaDetail {
+  entitlement?: number
+  remaining?: number
+  used?: number
+  percent_used?: number
+}
+
+export interface CopilotQuotaInfo {
+  plan?: string
+  reset_date?: string
+  completions?: CopilotQuotaDetail
+  chat?: CopilotQuotaDetail
+  premium_interactions?: CopilotQuotaDetail
+}
+
+export async function getCopilotQuota(id: number): Promise<CopilotQuotaInfo> {
+  const { data } = await apiClient.get<CopilotQuotaInfo>(`/admin/accounts/${id}/copilot-quota`)
+  return data
+}
+
 export interface SyncUpstreamModelsResult {
   models: string[]
   metadata?: Record<string, UpstreamModelMetadata>
@@ -1105,6 +1125,7 @@ export const accountsAPI = {
   resetTempUnschedulable,
   setSchedulable,
   getAvailableModels,
+  getCopilotQuota,
   syncUpstreamModels,
   syncUpstreamModelsPreview,
   generateAuthUrl,

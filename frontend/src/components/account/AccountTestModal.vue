@@ -41,6 +41,19 @@
         </span>
       </div>
 
+      <div v-if="account?.platform === 'copilot' && copilotQuota" class="rounded-lg border border-cyan-200 bg-cyan-50 p-3 text-sm dark:border-cyan-800 dark:bg-cyan-900/20">
+        <div class="mb-2 flex items-center justify-between font-medium text-cyan-900 dark:text-cyan-100">
+          <span>{{ t('admin.accounts.quotaLimit') }}</span>
+          <span v-if="copilotQuota.plan">{{ copilotQuota.plan }}</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-xs text-cyan-800 dark:text-cyan-200">
+          <div v-for="item in copilotQuotaItems" :key="item.label">
+            <div class="text-cyan-600 dark:text-cyan-400">{{ item.label }}</div>
+            <div>{{ item.remaining ?? '-' }} / {{ item.entitlement ?? '-' }}</div>
+          </div>
+        </div>
+      </div>
+
       <div class="space-y-1.5">
         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
           {{ t('admin.accounts.selectTestModel') }}
@@ -252,6 +265,7 @@ import { useClipboard } from '@/composables/useClipboard'
 import { buildApiUrl } from '@/api/client'
 import { adminAPI } from '@/api/admin'
 import type { Account, ClaudeModel } from '@/types'
+import type { CopilotQuotaInfo } from '@/api/admin/accounts'
 
 const { t } = useI18n()
 const { copyToClipboard } = useClipboard()
@@ -284,10 +298,16 @@ const availableModels = ref<ClaudeModel[]>([])
 const selectedModelId = ref('')
 const testPrompt = ref('')
 const loadingModels = ref(false)
+const copilotQuota = ref<CopilotQuotaInfo | null>(null)
 let abortController: AbortController | null = null
 const generatedImages = ref<PreviewImage[]>([])
 const testMode = ref<'default' | 'compact'>('default')
 const isOpenAIAccount = computed(() => props.account?.platform === 'openai')
+const copilotQuotaItems = computed(() => [
+  { label: 'Chat', ...copilotQuota.value?.chat },
+  { label: 'Completions', ...copilotQuota.value?.completions },
+  { label: 'Premium', ...copilotQuota.value?.premium_interactions }
+])
 const openAITestModeOptions = computed(() => [
   { value: 'default', label: t('admin.accounts.openai.testModeDefault') },
   { value: 'compact', label: t('admin.accounts.openai.testModeCompact') }
@@ -328,6 +348,10 @@ watch(
       testPrompt.value = ''
       testMode.value = 'default'
       resetState()
+      copilotQuota.value = null
+      if (props.account.platform === 'copilot') {
+        copilotQuota.value = await adminAPI.accounts.getCopilotQuota(props.account.id).catch(() => null)
+      }
       await loadAvailableModels()
     } else {
       abortStream()
