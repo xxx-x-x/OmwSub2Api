@@ -28,6 +28,8 @@ const (
 	PlatformZhipu       = "zhipu"    // 智谱 GLM (bigmodel)
 	PlatformDeepseek    = "deepseek" // DeepSeek
 	PlatformHappyShrimp = "happy_shrimp"
+	PlatformSora        = "sora"
+	PlatformCopilot     = "copilot" // GitHub Copilot
 	PlatformComposite   = "composite"
 )
 

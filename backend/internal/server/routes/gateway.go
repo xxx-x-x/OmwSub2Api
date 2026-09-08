@@ -520,6 +520,22 @@ func RegisterGatewayRoutes(
 		antigravityV1Beta.POST("/models/*modelAction", h.Gateway.GeminiV1BetaModels)
 	}
 
+	// GitHub Copilot 专用路由，避免与普通 /v1 多平台调度混用。
+	copilotV1 := r.Group("/copilot/v1")
+	copilotV1.Use(bodyLimit)
+	copilotV1.Use(clientRequestID)
+	copilotV1.Use(opsErrorLogger)
+	copilotV1.Use(endpointNorm)
+	copilotV1.Use(middleware.ForcePlatform(service.PlatformCopilot))
+	copilotV1.Use(gin.HandlerFunc(apiKeyAuth))
+	copilotV1.Use(groupModelAllowlist)
+	copilotV1.Use(requireGroupAnthropic)
+	{
+		copilotV1.POST("/chat/completions", h.CopilotGateway.ChatCompletions)
+		copilotV1.GET("/models", h.CopilotGateway.Models)
+		copilotV1.POST("/messages", h.CopilotGateway.Messages)
+	}
+
 }
 
 func dispatchCodexModelsGateway(c *gin.Context, openAIHandler, generatedHandler gin.HandlerFunc) {

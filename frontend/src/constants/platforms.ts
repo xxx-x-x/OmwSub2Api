@@ -17,6 +17,7 @@ export const CONCRETE_PLATFORM_OPTIONS = [
   { value: 'antigravity', label: 'Antigravity' },
   { value: 'grok', label: 'Grok' },
   { value: 'happy_shrimp', label: 'Happy Shrimp' },
+  { value: 'copilot', label: 'GitHub Copilot' },
   { value: 'kimi', label: 'Kimi' },
   { value: 'zhipu', label: 'Zhipu GLM' },
   { value: 'deepseek', label: 'DeepSeek' }
