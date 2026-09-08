@@ -21,6 +21,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/antigravity"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/copilot"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
@@ -2758,6 +2759,30 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 					Type:        "model",
 					DisplayName: requestedModel,
 				})
+			}
+		}
+		response.Success(c, models)
+		return
+	}
+
+	if account.Platform == service.PlatformCopilot {
+		mapping := account.GetModelMapping()
+		if len(mapping) == 0 {
+			response.Success(c, copilot.DefaultModels)
+			return
+		}
+		models := make([]copilot.Model, 0, len(mapping))
+		for requestedModel := range mapping {
+			found := false
+			for _, defaultModel := range copilot.DefaultModels {
+				if defaultModel.ID == requestedModel {
+					models = append(models, defaultModel)
+					found = true
+					break
+				}
+			}
+			if !found {
+				models = append(models, copilot.Model{ID: requestedModel, Object: "model", Type: "model", DisplayName: requestedModel})
 			}
 		}
 		response.Success(c, models)

@@ -174,6 +174,23 @@
             <Icon name="play" size="sm" />
             Happy Shrimp
           </button>
+          <button
+            type="button"
+            @click="form.platform = 'copilot'"
+            :class="[
+              'flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-all',
+              form.platform === 'copilot'
+                ? 'bg-white text-cyan-600 shadow-sm dark:bg-dark-600 dark:text-cyan-400'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            ]"
+          >
+            <PlatformIcon platform="copilot" size="sm" />
+            GitHub Copilot
+          </button>
+        </div>
+        <div v-if="form.platform === 'copilot'" class="mt-2 rounded-lg border border-cyan-200 bg-cyan-50 p-3 dark:border-cyan-800 dark:bg-cyan-900/20">
+          <label class="input-label">{{ t('admin.accounts.apiKey') }}</label>
+          <input v-model="copilotGithubToken" type="password" class="input font-mono" autocomplete="off" />
         </div>
       </div>
 
@@ -4114,6 +4131,7 @@ const accountCategory = ref<'oauth-based' | 'apikey' | 'bedrock' | 'service_acco
 const addMethod = ref<AddMethod>('oauth') // For oauth-based: 'oauth' or 'setup-token'
 const apiKeyBaseUrl = ref('https://api.anthropic.com')
 const apiKeyValue = ref('')
+const copilotGithubToken = ref('')
 const upstreamBillingAutoProbeEnabled = ref(true)
 
 // ── 国产供应商（Kimi / Zhipu / DeepSeek）账号类型、API 协议与端点 ──
@@ -5777,6 +5795,17 @@ const handleSubmit = async () => {
   }
 
   // For apikey type, create directly
+  if (form.platform === 'copilot') {
+    if (!copilotGithubToken.value.trim()) {
+      appStore.showError(t('admin.accounts.pleaseEnterApiKey'))
+      return
+    }
+    await createAccountAndFinish('copilot', 'apikey', {
+      github_token: copilotGithubToken.value.trim()
+    })
+    return
+  }
+
   if (!apiKeyValue.value.trim()) {
     appStore.showError(t('admin.accounts.pleaseEnterApiKey'))
     return
