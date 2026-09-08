@@ -226,6 +226,8 @@
           <label class="input-label">User ID / Phone（可选，用于展示）</label>
           <input v-model="happyShrimpUserId" type="text" class="input" />
         </div>
+      </div>
+
         <!-- CN providers row: Kimi / Zhipu GLM / DeepSeek -->
         <div class="mt-2 flex flex-wrap rounded-lg bg-gray-100 p-1 dark:bg-dark-700">
           <button
@@ -268,7 +270,6 @@
             DeepSeek
           </button>
         </div>
-      </div>
 
       <!-- Account Type Selection (Anthropic) -->
       <div v-if="form.platform === 'anthropic'">
