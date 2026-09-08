@@ -16,12 +16,6 @@
 
 English | [中文](README_CN.md) | [日本語](README_JA.md)
 
-<p align="center">
-  <a href="README_CN.md#api-调用文档">
-    <img src="https://img.shields.io/badge/API%20Docs-Click%20Here-2ea44f?style=for-the-badge" alt="API Docs" />
-  </a>
-</p>
-
 </div>
 
 ## ⚠️ Important Notice
@@ -195,19 +189,19 @@ Sub2API is an AI API gateway platform designed to distribute and manage API quot
 
 Community projects that extend or integrate with Sub2API:
 
-| Project                                                    | Description                     | Features                                                                                                                                                        |
-| ---------------------------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ~~[Sub2ApiPay](https://github.com/touwaeriol/sub2apipay)~~ | ~~Self-service payment system~~ | **Now Built-in** — Payment is now integrated into Sub2API, no separate deployment needed. See [Payment Configuration Guide](docs/PAYMENT.md)                    |
-| [sub2api-mobile](https://github.com/ckken/sub2api-mobile)  | Mobile admin console            | Cross-platform app (iOS/Android/Web) for user management, account management, monitoring dashboard, and multi-backend switching; built with Expo + React Native |
+| Project | Description | Features |
+|---------|-------------|----------|
+| ~~[Sub2ApiPay](https://github.com/touwaeriol/sub2apipay)~~ | ~~Self-service payment system~~ | **Now Built-in** — Payment is now integrated into Sub2API, no separate deployment needed. See [Payment Configuration Guide](docs/PAYMENT.md) |
+| [sub2api-mobile](https://github.com/ckken/sub2api-mobile) | Mobile admin console | Cross-platform app (iOS/Android/Web) for user management, account management, monitoring dashboard, and multi-backend switching; built with Expo + React Native |
 
 ## Tech Stack
 
-| Component   | Technology                     |
-| ----------- | ------------------------------ |
-| Backend     | Go 1.27.0, Gin, Ent             |
-| Frontend    | Vue 3.4+, Vite 5+, TailwindCSS |
-| Database    | PostgreSQL 15+                 |
-| Cache/Queue | Redis 7+                       |
+| Component | Technology |
+|-----------|------------|
+| Backend | Go 1.27.0, Gin, Ent |
+| Frontend | Vue 3.4+, Vite 5+, TailwindCSS |
+| Database | PostgreSQL 15+ |
+| Cache/Queue | Redis 7+ |
 
 ---
 
@@ -397,10 +391,10 @@ docker compose -f docker-compose.local.yml logs -f sub2api
 
 #### Deployment Versions
 
-| Version                      | Data Storage      | Migration                     | Best For                     |
-| ---------------------------- | ----------------- | ----------------------------- | ---------------------------- |
+| Version | Data Storage | Migration | Best For |
+|---------|-------------|-----------|----------|
 | **docker-compose.local.yml** | Local directories | ✅ Easy (tar entire directory) | Production, frequent backups |
-| **docker-compose.yml**       | Named volumes     | ⚠️ Requires docker commands    | Simple setup                 |
+| **docker-compose.yml** | Named volumes | ⚠️ Requires docker commands | Simple setup |
 
 **Recommendation:** Use `docker-compose.local.yml` (deployed by script) for easier data management.
 
@@ -762,24 +756,24 @@ Sub2API supports both Grok subscription accounts through xAI OAuth and standard 
 
 The Grok OAuth flow uses PKCE and does not require committing private secrets. The default client details follow the public xAI OAuth flow used by compatible clients, and every value can be overridden by environment variable:
 
-| Variable                  | Default                                                                                                                                                     |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `XAI_OAUTH_CLIENT_ID`     | Public xAI OAuth client ID                                                                                                                                  |
-| `XAI_OAUTH_SCOPE`         | `openid profile email offline_access grok-cli:access api:access`                                                                                            |
-| `XAI_OAUTH_REDIRECT_URI`  | `http://127.0.0.1:56121/callback`                                                                                                                           |
-| `XAI_OAUTH_AUTHORIZE_URL` | `https://auth.x.ai/oauth2/authorize`                                                                                                                        |
-| `XAI_OAUTH_TOKEN_URL`     | `https://auth.x.ai/oauth2/token`                                                                                                                            |
-| `XAI_BASE_URL`            | `https://api.x.ai/v1`; runtime-diagnostics override (account `base_url` controls request forwarding)                                                        |
-| `XAI_GROK_CLI_VERSION`    | `0.2.114`; optional override for the client identity sent to `cli-chat-proxy.grok.com`. The pinned value is also the floor: an override below it is dropped |
+| Variable | Default |
+|----------|---------|
+| `XAI_OAUTH_CLIENT_ID` | Public xAI OAuth client ID |
+| `XAI_OAUTH_SCOPE` | `openid profile email offline_access grok-cli:access api:access` |
+| `XAI_OAUTH_REDIRECT_URI` | `http://127.0.0.1:56121/callback` |
+| `XAI_OAUTH_AUTHORIZE_URL` | `https://auth.x.ai/oauth2/authorize` |
+| `XAI_OAUTH_TOKEN_URL` | `https://auth.x.ai/oauth2/token` |
+| `XAI_BASE_URL` | `https://api.x.ai/v1`; runtime-diagnostics override (account `base_url` controls request forwarding) |
+| `XAI_GROK_CLI_VERSION` | `0.2.114`; optional override for the client identity sent to `cli-chat-proxy.grok.com`. The pinned value is also the floor: an override below it is dropped |
 
 Administrators can create Grok OAuth or API-key accounts from the dashboard. OAuth authorization and reauthorization are also available through the admin API:
 
-| Endpoint                                       | Purpose                                                              |
-| ---------------------------------------------- | -------------------------------------------------------------------- |
-| `POST /api/v1/admin/grok/oauth/auth-url`       | Generate an xAI OAuth authorization URL                              |
-| `POST /api/v1/admin/grok/oauth/exchange-code`  | Exchange a callback URL, query string, or code for OAuth credentials |
-| `POST /api/v1/admin/grok/oauth/refresh-token`  | Validate or refresh a Grok refresh token                             |
-| `POST /api/v1/admin/grok/accounts/:id/refresh` | Refresh an existing Grok account                                     |
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/admin/grok/oauth/auth-url` | Generate an xAI OAuth authorization URL |
+| `POST /api/v1/admin/grok/oauth/exchange-code` | Exchange a callback URL, query string, or code for OAuth credentials |
+| `POST /api/v1/admin/grok/oauth/refresh-token` | Validate or refresh a Grok refresh token |
+| `POST /api/v1/admin/grok/accounts/:id/refresh` | Refresh an existing Grok account |
 
 OAuth credential storage reuses the existing account JSON fields: `access_token`, `refresh_token`, `token_type`, `expires_at`, `base_url`, optional `email`, optional `subscription_tier`, and `entitlement_status`. OAuth inference defaults to `https://cli-chat-proxy.grok.com/v1`; existing OAuth accounts that stored the old `https://api.x.ai/v1` default are redirected to the subscription proxy at runtime. Explicit custom upstreams remain unchanged.
 
@@ -834,10 +828,10 @@ Sub2API supports [Antigravity](https://antigravity.so/) accounts. After authoriz
 
 ### Dedicated Endpoints
 
-| Endpoint                   | Model         |
-| -------------------------- | ------------- |
+| Endpoint | Model |
+|----------|-------|
 | `/antigravity/v1/messages` | Claude models |
-| `/antigravity/v1beta/`     | Gemini models |
+| `/antigravity/v1beta/` | Gemini models |
 
 ### Claude Code Configuration
 

@@ -271,57 +271,6 @@
           </button>
         </div>
 
-      <!-- Happy Shrimp: 短信登录或手工导入 token -->
-      <div v-if="form.platform === 'happy_shrimp'" class="mt-4 space-y-4">
-        <div class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800 dark:border-orange-800/40 dark:bg-orange-900/20 dark:text-orange-200">
-          <p>推荐使用手机号验证码登录，登录成功后系统会自动获取并填充凭据。JWT 过期后系统将自动续期。</p>
-        </div>
-        <div class="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-1 dark:bg-dark-700">
-          <button type="button" class="rounded-md px-3 py-2 text-sm" :class="happyShrimpLoginMode === 'sms' ? 'bg-white font-medium text-orange-600 shadow-sm dark:bg-dark-600' : 'text-gray-500'" @click="happyShrimpLoginMode = 'sms'">短信登录</button>
-          <button type="button" class="rounded-md px-3 py-2 text-sm" :class="happyShrimpLoginMode === 'manual' ? 'bg-white font-medium text-orange-600 shadow-sm dark:bg-dark-600' : 'text-gray-500'" @click="happyShrimpLoginMode = 'manual'">手动导入</button>
-        </div>
-        <template v-if="happyShrimpLoginMode === 'sms'">
-          <div>
-            <label class="input-label">手机号</label>
-            <div class="flex gap-2">
-              <input v-model="happyShrimpCountryCode" class="input w-24" placeholder="86" />
-              <input v-model="happyShrimpPhone" class="input flex-1" inputmode="tel" placeholder="请输入快乐虾米登录手机号" />
-              <button type="button" class="btn btn-secondary whitespace-nowrap" :disabled="happyShrimpSMSLoading || happyShrimpCountdown > 0" @click="sendHappyShrimpCode">
-                {{ happyShrimpCountdown > 0 ? `${happyShrimpCountdown}s` : happyShrimpSMSLoading ? '发送中...' : '发送验证码' }}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label class="input-label">短信验证码</label>
-            <div class="flex gap-2">
-              <input v-model="happyShrimpCode" class="input flex-1" inputmode="numeric" placeholder="请输入验证码" />
-              <button type="button" class="btn btn-primary whitespace-nowrap" :disabled="happyShrimpLoginLoading || happyShrimpLoggedIn" @click="loginHappyShrimp">
-                {{ happyShrimpLoggedIn ? '已登录' : happyShrimpLoginLoading ? '登录中...' : '登录并获取凭据' }}
-              </button>
-            </div>
-            <p v-if="happyShrimpLoggedIn" class="mt-2 text-sm text-green-600 dark:text-green-400">登录成功，凭据已自动填充，可以创建账号。</p>
-          </div>
-        </template>
-        <template v-else>
-          <div>
-            <label class="input-label">Access Token (JWT)</label>
-            <input v-model="happyShrimpAccessToken" type="text" class="input" placeholder="eyJhbGciOiJIUzI1NiJ9..." />
-          </div>
-          <div>
-            <label class="input-label">Refresh Token</label>
-            <input v-model="happyShrimpRefreshToken" type="text" class="input" placeholder="从 localStorage hs_auth 获取" />
-          </div>
-          <div>
-            <label class="input-label">Device ID（可选）</label>
-            <input v-model="happyShrimpDeviceId" type="text" class="input" placeholder="从 localStorage hs_device_id 获取" />
-          </div>
-        </template>
-        <div v-if="happyShrimpLoggedIn || happyShrimpLoginMode === 'manual'">
-          <label class="input-label">User ID / Phone（可选，用于展示）</label>
-          <input v-model="happyShrimpUserId" type="text" class="input" />
-        </div>
-      </div>
-
       <!-- Account Type Selection (Anthropic) -->
       <div v-if="form.platform === 'anthropic'">
         <label class="input-label">{{ t('admin.accounts.accountType') }}</label>

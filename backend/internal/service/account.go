@@ -272,16 +272,6 @@ func (a *Account) IsGrokOAuth() bool {
 	return a.IsGrok() && a.Type == AccountTypeOAuth
 }
 
-// IsHappyShrimp 报告账号是否为快乐虾米平台。
-func (a *Account) IsHappyShrimp() bool {
-	return a != nil && a.Platform == PlatformHappyShrimp
-}
-
-// IsHappyShrimpOAuth 报告是否为快乐虾米 OAuth（token）账号。
-func (a *Account) IsHappyShrimpOAuth() bool {
-	return a.IsHappyShrimp() && a.Type == AccountTypeOAuth
-}
-
 // IsKimi / IsZhipu / IsDeepseek 标识国产 OpenAI 兼容供应商账号。
 func (a *Account) IsKimi() bool {
 	return a.Platform == PlatformKimi
