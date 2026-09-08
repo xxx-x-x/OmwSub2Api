@@ -18,13 +18,13 @@ const happyShrimpGenerationTimeout = 3*time.Minute + 15*time.Second
 
 // AudioGenerationItem 是 /v1/audio/generations 响应的单首歌。
 type AudioGenerationItem struct {
-	ID          string  `json:"id"`
-	Title       string  `json:"title,omitempty"`
-	DurationMS  *int64  `json:"duration_ms,omitempty"`
-	URL         string  `json:"url"`
-	CoverURL    string  `json:"cover_url,omitempty"`
-	Instrumental bool    `json:"instrumental,omitempty"`
-	Tags        []Tag   `json:"tags,omitempty"`
+	ID           string `json:"id"`
+	Title        string `json:"title,omitempty"`
+	DurationMS   *int64 `json:"duration_ms,omitempty"`
+	URL          string `json:"url"`
+	CoverURL     string `json:"cover_url,omitempty"`
+	Instrumental bool   `json:"instrumental,omitempty"`
+	Tags         []Tag  `json:"tags,omitempty"`
 }
 
 // Tag 音频标签（与 pkg/happyshrimp.Tag 对齐的对外结构）。
@@ -41,8 +41,8 @@ type AudioGenerationsResponse struct {
 
 // HappyShrimpGatewayService 快乐虾米音乐生成网关。
 type HappyShrimpGatewayService struct {
-	accountRepo   AccountRepository
-	tokenProvider *HappyShrimpTokenProvider
+	accountRepo    AccountRepository
+	tokenProvider  *HappyShrimpTokenProvider
 	settingService *SettingService
 }
 
