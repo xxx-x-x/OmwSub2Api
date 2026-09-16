@@ -43,14 +43,26 @@
 
       <div v-if="account?.platform === 'copilot' && copilotQuota" class="rounded-lg border border-cyan-200 bg-cyan-50 p-3 text-sm dark:border-cyan-800 dark:bg-cyan-900/20">
         <div class="mb-2 flex items-center justify-between font-medium text-cyan-900 dark:text-cyan-100">
-          <span>{{ t('admin.accounts.quotaLimit') }}</span>
-          <span v-if="copilotQuota.plan">{{ copilotQuota.plan }}</span>
+          <span>{{ t('admin.accounts.copilot.quota.title') }}</span>
+          <span v-if="copilotQuota.plan">{{ t('admin.accounts.copilot.quota.plan') }}: {{ copilotQuota.plan }}</span>
         </div>
         <div class="grid grid-cols-3 gap-2 text-xs text-cyan-800 dark:text-cyan-200">
           <div v-for="item in copilotQuotaItems" :key="item.label">
             <div class="text-cyan-600 dark:text-cyan-400">{{ item.label }}</div>
-            <div>{{ item.remaining ?? '-' }} / {{ item.entitlement ?? '-' }}</div>
+            <div>
+              {{
+                item.entitlement == null
+                  ? t('admin.accounts.copilot.quota.unlimited')
+                  : t('admin.accounts.copilot.quota.used', {
+                      used: item.used ?? ((item.entitlement ?? 0) - (item.remaining ?? 0)),
+                      total: item.entitlement
+                    })
+              }}
+            </div>
           </div>
+        </div>
+        <div v-if="copilotQuota.reset_date || copilotQuota.quota_reset_date" class="mt-2 text-xs text-cyan-700 dark:text-cyan-300">
+          {{ t('admin.accounts.copilot.quota.resetDate') }}: {{ copilotQuota.reset_date || copilotQuota.quota_reset_date }}
         </div>
       </div>
 
@@ -306,7 +318,7 @@ const isOpenAIAccount = computed(() => props.account?.platform === 'openai')
 const copilotQuotaItems = computed(() => [
   { label: 'Chat', ...copilotQuota.value?.chat },
   { label: 'Completions', ...copilotQuota.value?.completions },
-  { label: 'Premium', ...copilotQuota.value?.premium_interactions }
+  { label: t('admin.accounts.copilot.quota.premiumInteractions'), ...copilotQuota.value?.premium_interactions }
 ])
 const openAITestModeOptions = computed(() => [
   { value: 'default', label: t('admin.accounts.openai.testModeDefault') },

@@ -16,7 +16,9 @@ const PROVIDER_BY_PLATFORM: Record<GroupPlatform, KeyGroupProvider> = {
   grok: 'other',
   antigravity: 'other',
   composite: 'other',
-  opencode_go: 'other'
+  opencode_go: 'other',
+  happy_shrimp: 'other',
+  copilot: 'other'
 }
 
 export function getKeyGroupProvider(platform: GroupPlatform): KeyGroupProvider {

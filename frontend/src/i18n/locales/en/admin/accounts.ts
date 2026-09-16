@@ -1026,6 +1026,37 @@ export default {
       mixedChannelWarning: 'Warning: Group "{groupName}" contains both {currentPlatform} and {otherPlatform} accounts. Mixing different channels may cause thinking block signature validation issues, which will fallback to non-thinking mode. Are you sure you want to continue?',
       pleaseEnterAccountName: 'Please enter account name',
       pleaseEnterApiKey: 'Please enter API Key',
+      copilot: {
+        githubToken: 'GitHub Personal Access Token *',
+        githubTokenHint: 'A GitHub PAT with Copilot access (ghp_xxx or github_pat_xxx)',
+        pleaseEnterToken: 'Please enter a GitHub personal access token',
+        baseUrlHint: 'Default: https://api.githubcopilot.com. Change only for a custom endpoint (e.g. api.business.githubcopilot.com for Enterprise).',
+        deviceOAuth: 'GitHub Login (Recommended)',
+        deviceOAuthDesc: 'Sign in with the browser. Supports organization Copilot.',
+        patMethod: 'Personal Access Token',
+        patMethodDesc: 'Manually enter a PAT with Copilot access',
+        deviceOAuthIntro: 'Click the button below to start GitHub authentication. A verification code will appear here — enter it in the opened browser window.',
+        startAuth: 'Start GitHub Authentication',
+        waitingForAuth: 'Waiting for authorization...',
+        openBrowser: 'Open the following link in your browser and enter the code below:',
+        enterCode: 'Enter this verification code:',
+        authSuccess: 'GitHub authentication succeeded!',
+        loggedInAs: 'Logged in as {login}',
+        tryAgain: 'Try again',
+        deviceFlowError: 'Failed to start device authentication flow',
+        pleaseCompleteAuth: 'Please complete GitHub authentication first',
+        modelMapping: 'Copilot Model Mapping',
+        modelMappingHint: 'Map request model names to Copilot actual model names (e.g. claude-sonnet-4-5 → claude-sonnet-4.5). Leave empty to use built-in default mapping (automatic dash↔dot conversion).',
+        quota: {
+          title: 'Copilot Usage',
+          plan: 'Plan',
+          premiumInteractions: 'Premium Interactions',
+          resetDate: 'Resets On',
+          unlimited: 'Unlimited',
+          remaining: '{n} remaining',
+          used: '{used}/{total} used'
+        }
+      },
       happyShrimp: {
         accessTokenRequired: 'Please enter the Happy Shrimp access token (JWT from the hs_token cookie)',
         refreshTokenRequired: 'Please enter the Happy Shrimp refresh token (from localStorage hs_auth)'

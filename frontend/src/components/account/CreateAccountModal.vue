@@ -188,9 +188,171 @@
             GitHub Copilot
           </button>
         </div>
-        <div v-if="form.platform === 'copilot'" class="mt-2 rounded-lg border border-cyan-200 bg-cyan-50 p-3 dark:border-cyan-800 dark:bg-cyan-900/20">
-          <label class="input-label">{{ t('admin.accounts.apiKey') }}</label>
-          <input v-model="copilotGithubToken" type="password" class="input font-mono" autocomplete="off" />
+      </div>
+
+      <!-- Copilot Account Type Selection -->
+      <div v-if="form.platform === 'copilot'">
+        <label class="input-label">{{ t('admin.accounts.accountType') }}</label>
+        <div class="mt-2 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            @click="copilotAddMethod = 'device-oauth'"
+            :class="[
+              'flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all',
+              copilotAddMethod === 'device-oauth'
+                ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20'
+                : 'border-gray-200 hover:border-cyan-300 dark:border-dark-600 dark:hover:border-cyan-700'
+            ]"
+          >
+            <div
+              :class="[
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                copilotAddMethod === 'device-oauth'
+                  ? 'bg-cyan-500 text-white'
+                  : 'bg-gray-100 text-gray-500 dark:bg-dark-600 dark:text-gray-400'
+              ]"
+            >
+              <Icon name="sparkles" size="sm" />
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-900 dark:text-white">{{ t('admin.accounts.copilot.deviceOAuth') }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.accounts.copilot.deviceOAuthDesc') }}</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            @click="copilotAddMethod = 'pat'"
+            :class="[
+              'flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all',
+              copilotAddMethod === 'pat'
+                ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20'
+                : 'border-gray-200 hover:border-cyan-300 dark:border-dark-600 dark:hover:border-cyan-700'
+            ]"
+          >
+            <div
+              :class="[
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                copilotAddMethod === 'pat'
+                  ? 'bg-cyan-500 text-white'
+                  : 'bg-gray-100 text-gray-500 dark:bg-dark-600 dark:text-gray-400'
+              ]"
+            >
+              <Icon name="key" size="sm" />
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-900 dark:text-white">{{ t('admin.accounts.copilot.patMethod') }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.accounts.copilot.patMethodDesc') }}</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Copilot Device OAuth Flow -->
+      <div v-if="form.platform === 'copilot' && copilotAddMethod === 'device-oauth'" class="space-y-4">
+        <div v-if="copilotDeviceState === 'idle'" class="rounded-lg border border-cyan-200 bg-cyan-50 p-4 dark:border-cyan-800 dark:bg-cyan-900/20">
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            {{ t('admin.accounts.copilot.deviceOAuthIntro') }}
+          </p>
+          <button
+            type="button"
+            @click="startCopilotDeviceFlow"
+            :disabled="copilotDeviceLoading"
+            class="mt-3 inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
+          >
+            <svg v-if="copilotDeviceLoading" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            {{ t('admin.accounts.copilot.startAuth') }}
+          </button>
+        </div>
+
+        <div v-if="copilotDeviceState === 'waiting'" class="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+          <div class="mb-3 flex items-center gap-2">
+            <svg class="h-5 w-5 animate-pulse text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-sm font-medium text-amber-800 dark:text-amber-200">{{ t('admin.accounts.copilot.waitingForAuth') }}</span>
+          </div>
+          <p class="mb-3 text-sm text-gray-700 dark:text-gray-300">
+            {{ t('admin.accounts.copilot.openBrowser') }}
+          </p>
+          <div class="mb-3 flex items-center gap-3">
+            <a
+              :href="copilotVerificationUri"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-sm font-medium text-cyan-600 underline hover:text-cyan-700 dark:text-cyan-400"
+            >
+              {{ copilotVerificationUri }}
+            </a>
+          </div>
+          <p class="mb-2 text-sm text-gray-700 dark:text-gray-300">
+            {{ t('admin.accounts.copilot.enterCode') }}
+          </p>
+          <div class="flex items-center gap-3">
+            <code class="rounded-lg bg-white px-4 py-2 text-2xl font-bold tracking-widest text-gray-900 shadow-sm dark:bg-dark-600 dark:text-white">
+              {{ copilotUserCode }}
+            </code>
+            <button
+              type="button"
+              @click="copyUserCode"
+              class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-dark-600 dark:hover:text-gray-300"
+              :title="t('common.copy')"
+            >
+              <Icon name="copy" size="sm" />
+            </button>
+          </div>
+          <div v-if="copilotDeviceError" class="mt-3 text-sm text-red-600 dark:text-red-400">
+            {{ copilotDeviceError }}
+          </div>
+        </div>
+
+        <div v-if="copilotDeviceState === 'success'" class="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+          <div class="flex items-center gap-2">
+            <svg class="h-5 w-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-sm font-medium text-green-800 dark:text-green-200">
+              {{ t('admin.accounts.copilot.authSuccess') }}
+            </span>
+          </div>
+          <p v-if="copilotGithubLogin" class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+            {{ t('admin.accounts.copilot.loggedInAs', { login: copilotGithubLogin }) }}
+          </p>
+        </div>
+
+        <div v-if="copilotDeviceState === 'error'" class="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+          <div class="flex items-center gap-2">
+            <svg class="h-5 w-5 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <span class="text-sm font-medium text-red-800 dark:text-red-200">
+              {{ copilotDeviceError }}
+            </span>
+          </div>
+          <button
+            type="button"
+            @click="resetCopilotDeviceFlow"
+            class="mt-3 text-sm font-medium text-red-600 underline hover:text-red-700 dark:text-red-400"
+          >
+            {{ t('admin.accounts.copilot.tryAgain') }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Copilot PAT input (manual method) -->
+      <div v-if="form.platform === 'copilot' && copilotAddMethod === 'pat'" class="space-y-4">
+        <div>
+          <label class="input-label">{{ t('admin.accounts.copilot.githubToken') }}</label>
+          <input
+            v-model="copilotGithubToken"
+            type="password"
+            class="input font-mono"
+            autocomplete="off"
+            placeholder="ghp_xxxxxxxxxxxx / github_pat_xxxxxxxxxxxx"
+          />
+          <p class="input-hint">{{ t('admin.accounts.copilot.githubTokenHint') }}</p>
         </div>
       </div>
 
@@ -3969,7 +4131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 
@@ -3983,6 +4145,7 @@ import {
   isValidWildcardPattern
 } from '@/composables/useModelWhitelist'
 import { adminAPI } from '@/api/admin'
+import { startDeviceFlow, pollDeviceFlow } from '@/api/admin/copilot'
 import { useQuotaNotifyState } from '@/composables/useQuotaNotifyState'
 import {
   useAccountOAuth,
@@ -4234,6 +4397,16 @@ const accountCategory = ref<'oauth-based' | 'apikey' | 'bedrock' | 'service_acco
 const addMethod = ref<AddMethod>('oauth') // For oauth-based: 'oauth' or 'setup-token'
 const apiKeyBaseUrl = ref('https://api.anthropic.com')
 const apiKeyValue = ref('')
+const copilotAddMethod = ref<'device-oauth' | 'pat'>('device-oauth')
+const copilotDeviceState = ref<'idle' | 'waiting' | 'success' | 'error'>('idle')
+const copilotDeviceLoading = ref(false)
+const copilotDeviceError = ref('')
+const copilotUserCode = ref('')
+const copilotVerificationUri = ref('')
+const copilotSessionId = ref('')
+const copilotGithubLogin = ref('')
+const copilotOAuthToken = ref('')
+let copilotPollTimer: ReturnType<typeof setInterval> | null = null
 const copilotGithubToken = ref('')
 const upstreamBillingAutoProbeEnabled = ref(true)
 
@@ -5480,6 +5653,9 @@ const resetForm = () => {
   fetchAntigravityDefaultMappings().then(mappings => {
     antigravityModelMappings.value = [...mappings]
   })
+  resetCopilotDeviceFlow()
+  copilotAddMethod.value = 'device-oauth'
+  copilotGithubToken.value = ''
   poolModeEnabled.value = false
   poolModeRetryCount.value = DEFAULT_POOL_MODE_RETRY_COUNT
   poolModeRetryStatusCodesInput.value = ''
@@ -5953,12 +6129,19 @@ const handleSubmit = async () => {
 
   // For apikey type, create directly
   if (form.platform === 'copilot') {
-    if (!copilotGithubToken.value.trim()) {
-      appStore.showError(t('admin.accounts.pleaseEnterApiKey'))
+    const githubToken = copilotAddMethod.value === 'device-oauth'
+      ? copilotOAuthToken.value.trim()
+      : copilotGithubToken.value.trim()
+    if (copilotAddMethod.value === 'device-oauth' && copilotDeviceState.value !== 'success') {
+      appStore.showError(t('admin.accounts.copilot.pleaseCompleteAuth'))
+      return
+    }
+    if (!githubToken) {
+      appStore.showError(t('admin.accounts.copilot.pleaseEnterToken'))
       return
     }
     await createAccountAndFinish('copilot', 'apikey', {
-      github_token: copilotGithubToken.value.trim()
+      github_token: githubToken
     })
     return
   }
@@ -6123,6 +6306,88 @@ const handleValidateRefreshToken = (rt: string) => {
 const handleValidateSessionToken = (_sessionToken: string) => {
   // Session token validation removed
 }
+
+const stopCopilotPolling = () => {
+  if (copilotPollTimer) {
+    clearInterval(copilotPollTimer)
+    copilotPollTimer = null
+  }
+}
+
+const resetCopilotDeviceFlow = () => {
+  stopCopilotPolling()
+  copilotDeviceState.value = 'idle'
+  copilotDeviceError.value = ''
+  copilotUserCode.value = ''
+  copilotVerificationUri.value = ''
+  copilotSessionId.value = ''
+  copilotGithubLogin.value = ''
+  copilotOAuthToken.value = ''
+}
+
+const startCopilotDeviceFlow = async () => {
+  copilotDeviceLoading.value = true
+  copilotDeviceError.value = ''
+  try {
+    const resp = await startDeviceFlow()
+    copilotUserCode.value = resp.user_code
+    copilotVerificationUri.value = resp.verification_uri
+    copilotSessionId.value = resp.session_id
+    copilotDeviceState.value = 'waiting'
+    const interval = Math.max((resp.interval || 5) * 1000, 5000)
+    copilotPollTimer = setInterval(() => {
+      void pollCopilotDeviceFlow()
+    }, interval)
+  } catch (error: any) {
+    copilotDeviceError.value = error.response?.data?.error || error.message || t('admin.accounts.copilot.deviceFlowError')
+    copilotDeviceState.value = 'error'
+  } finally {
+    copilotDeviceLoading.value = false
+  }
+}
+
+const pollCopilotDeviceFlow = async () => {
+  if (!copilotSessionId.value) return
+
+  try {
+    const resp = await pollDeviceFlow(copilotSessionId.value)
+    if (resp.status === 'pending' || resp.status === 'slow_down') {
+      return
+    }
+    const githubToken = resp.github_token || resp.access_token
+    if (resp.status === 'complete' && githubToken) {
+      stopCopilotPolling()
+      copilotOAuthToken.value = githubToken
+      copilotGithubLogin.value = resp.github_login || ''
+      copilotDeviceState.value = 'success'
+      if (!form.name && resp.github_login) {
+        form.name = `Copilot-${resp.github_login}`
+      }
+    }
+  } catch (error: any) {
+    const errMsg = error.response?.data?.error || error.message || ''
+    if (errMsg.includes('authorization_pending') || errMsg.includes('slow_down')) {
+      return
+    }
+    stopCopilotPolling()
+    copilotDeviceError.value = errMsg || t('admin.accounts.copilot.deviceFlowError')
+    copilotDeviceState.value = 'error'
+  }
+}
+
+const copyUserCode = async () => {
+  if (!copilotUserCode.value) return
+  try {
+    await navigator.clipboard.writeText(copilotUserCode.value)
+    appStore.showSuccess(t('common.copiedToClipboard'))
+  } catch {
+    appStore.showError(t('common.copyFailed'))
+  }
+}
+
+onBeforeUnmount(() => {
+  stopCopilotPolling()
+})
 
 const formatDateTimeLocal = formatDateTimeLocalInput
 const parseDateTimeLocal = parseDateTimeLocalInput

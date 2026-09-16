@@ -643,7 +643,9 @@ export interface CopilotQuotaDetail {
 
 export interface CopilotQuotaInfo {
   plan?: string
+  plan_type?: string
   reset_date?: string
+  quota_reset_date?: string
   completions?: CopilotQuotaDetail
   chat?: CopilotQuotaDetail
   premium_interactions?: CopilotQuotaDetail

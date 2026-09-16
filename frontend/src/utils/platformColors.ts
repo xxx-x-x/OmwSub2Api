@@ -235,9 +235,7 @@ const GRADIENT_TEXT: Record<Platform, string> = {
   composite: 'text-cyan-100',
 }
 const GRADIENT_TEXT_DEFAULT = 'text-primary-100'
-happy_shrimp: 'text-orange-200',
-  copilot: 'text-cyan-200',
-  
+
 const GRADIENT_SUBTEXT: Record<Platform, string> = {
   anthropic: 'text-orange-200',
   openai: 'text-emerald-200',
@@ -249,15 +247,15 @@ const GRADIENT_SUBTEXT: Record<Platform, string> = {
   deepseek: 'text-teal-200',
   minimax: 'text-rose-200',
   opencode_go: 'text-amber-200',
+  happy_shrimp: 'text-orange-200',
+  copilot: 'text-cyan-200',
   composite: 'text-cyan-200',
 }
 const GRADIENT_SUBTEXT_DEFAULT = 'text-primary-200'
 
 // ── Public API ──────────────────────────────────────────────────────
 
-function ishappy_shrimp' ||
-    p === 'copilot' ||
-    p === 'Platform(p: string): p is Platform {
+function isPlatform(p: string): p is Platform {
   return (
     p === 'anthropic' ||
     p === 'openai' ||
@@ -269,6 +267,8 @@ function ishappy_shrimp' ||
     p === 'deepseek' ||
     p === 'minimax' ||
     p === 'opencode_go' ||
+    p === 'happy_shrimp' ||
+    p === 'copilot' ||
     p === 'composite'
   )
 }
